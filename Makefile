@@ -381,7 +381,8 @@ SHARD_WORLD1_OBJS = $(OBJ)\ShardManager\AssociationReputation.obj \
 # maintainer and the one-by-one processor. "nmake shard_admin" compiles them.
 SHARD_ADMIN_OBJS = $(OBJ)\ShardManager\AQBase.obj \
 	$(OBJ)\ShardManager\AdminQueryJobs.obj \
-	$(OBJ)\ShardManager\ShardMaintainer.obj
+	$(OBJ)\ShardManager\ShardMaintainer.obj \
+	$(OBJ)\ShardManager\OneByOneProcessor.obj
 
 TESTS = $(TESTS) $(BIN)\ShardClimateTest.exe
 

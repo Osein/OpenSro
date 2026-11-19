@@ -56,3 +56,9 @@ DWORD Cert_FindModuleIDByName(const char* pszModule);
 // 0xB450 answer): result of a rename job (bSucceeded 1 from OnComplete, 0 from OnFail).
 class AQ_CharDataEditor2;
 void ShardIntegrate_OnQueryResult(AQ_CharDataEditor2* pJob, BOOL bSucceeded);
+
+// Provided by the certification group (the own server record, 0x8588B4): its first WORD (the
+// shard ID) and the body ID at +0x121 of the record at +0x1C (the GlobalManager the silk
+// queries are relayed to).
+WORD Cert_GetOwnShardID();
+WORD Cert_GetGlobalManagerBodyID();
