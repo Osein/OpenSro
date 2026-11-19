@@ -382,7 +382,8 @@ SHARD_WORLD1_OBJS = $(OBJ)\ShardManager\AssociationReputation.obj \
 SHARD_ADMIN_OBJS = $(OBJ)\ShardManager\AQBase.obj \
 	$(OBJ)\ShardManager\AdminQueryJobs.obj \
 	$(OBJ)\ShardManager\ShardMaintainer.obj \
-	$(OBJ)\ShardManager\OneByOneProcessor.obj
+	$(OBJ)\ShardManager\OneByOneProcessor.obj \
+	$(OBJ)\ShardManager\AQCharDataSelector.obj
 
 TESTS = $(TESTS) $(BIN)\ShardClimateTest.exe
 
