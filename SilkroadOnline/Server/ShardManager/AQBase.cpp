@@ -114,3 +114,14 @@ bool AQ_Base::OnInitFailed(WORD wOpcode)
     AQ_WriteString(m_pResponse, strText);
     return OnFail();
 }
+
+void AQ_DBQuery::Setup(ServerFramework::CTrigger* pTrigger, int nSession)
+{
+    memset(this, 0, sizeof(*this));
+    if (!g_pShardDB)
+        BSAssertFail();
+    m_pSession = ShardDB_GetSession(g_pShardDB);
+    m_pTrigger = pTrigger;
+    m_nSession = nSession;
+    m_bNoRow = 1;
+}

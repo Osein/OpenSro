@@ -5,6 +5,7 @@
 #include <string>
 
 #include "BSLib/ChunkAllocator.h"
+#include "BSLib/DB/DBQuery.h"
 #include "BSNet/Msg.h"
 #include "ServerFramework/MassiveMsg.h"
 #include "ServerFramework/OverlapJob.h"
@@ -114,3 +115,56 @@ public:
 
 template <class T, class TBase>
 CChunkAllocatorST<T> CAQJobT<T, TBase>::s_Pool;
+
+// The CDBQuery of the August 2011 build is 0x2828 bytes: the statement jobs keep the row
+// buffer at +0x2818 / +0x281C (m_dwParam / m_pUserData of CDBQuery), the connection index at
+// +0x2820 and a "no row yet" flag at +0x2824 that their row trigger clears on the first row.
+struct AQ_DBQuery : public CDBQuery
+{
+    DWORD   m_bNoRow;       // +2824
+
+    // The inlined setup of the statement jobs: memset 0x2828, session of the shard DB, the
+    // trigger, connection nSession, the row buffer and m_bNoRow = 1.
+    void Setup(ServerFramework::CTrigger* pTrigger, int nSession);
+    void SetRow(void* pRow, int nRowSize)
+    {
+        m_dwParam = (DWORD)(DWORD_PTR)pRow;
+        m_pUserData = (void*)(DWORD_PTR)nRowSize;
+    }
+
+    // The part of every row trigger before a row is fetched: the row buffer is cleared.
+    void ResetRowBuffer()
+    {
+        int nSize = (int)(DWORD_PTR)m_pUserData;
+        BYTE* pRow = (BYTE*)(DWORD_PTR)m_dwParam;
+        m_pBuffer = pRow;
+        m_nRowSize = nSize;
+        m_nBufferSize = nSize;
+        memset(pRow, 0, nSize);
+    }
+};
+
+C_ASSERT(sizeof(AQ_DBQuery) == 0x2828);
+
+// Row trigger of the statement jobs (AQ_Statistics_TriggerWriteRow and the like): each row
+// goes to pMsg as {BYTE 1, row bytes}; before the first row pJob->WriteRowHeader(pMsg) runs.
+// Always 1 (keep reading).
+template <class T>
+int AQ_WriteQueryRow(T* pJob, ServerFramework::CMassiveMsg* pMsg, DWORD dwQuery)
+{
+    AQ_DBQuery* pQuery = (AQ_DBQuery*)(DWORD_PTR)dwQuery;
+    BYTE byRow = 1;
+    if (pQuery->m_bRowFetched)
+    {
+        pMsg->Write(&byRow, 1);
+        pMsg->Write(pQuery->m_pBuffer, (int)(DWORD_PTR)pQuery->m_pUserData);
+        return 1;
+    }
+    if (pQuery->m_bNoRow)
+    {
+        pQuery->m_bNoRow = 0;
+        pJob->WriteRowHeader(pMsg);
+    }
+    pQuery->ResetRowBuffer();
+    return 1;
+}
