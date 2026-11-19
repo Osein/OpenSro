@@ -181,6 +181,26 @@ down), **wrong** (wrong result or lost data), **minor** (cosmetic, leak, dead co
 | [SM-102](SM-102.md) | SR_ShardManager game worlds | minor | A reused game world layer keeps the old create parameter list |
 | [SM-103](SM-103.md) | SR_ShardManager game worlds | minor | Instance worlds with WorldMaxCount 0 cannot open a layer |
 | [SM-104](SM-104.md) | SR_ShardManager game worlds | minor | "Already Closed World" logs the packed world and layer as the world ID |
+| [SM-110](SM-110.md) | SR_ShardManager association reputation | minor | The association records are never given back |
+| [SM-111](SM-111.md) | SR_ShardManager association reputation | minor | Unknown temple codes count as Anubis |
+| [SM-112](SM-112.md) | SR_ShardManager association reputation | minor | A Haroeris draw has no winner |
+| [SM-113](SM-113.md) | SR_ShardManager log jobs | minor | The log functions keep the job on their early failures |
+| [SM-114](SM-114.md) | SR_ShardManager guild siege authority | minor | The missing member check of the siege authority never fires |
+| [SM-131](SM-131.md) | SR_ShardManager schedules | minor | A service-start event without a group crashes before the NULL check |
+| [SM-132](SM-132.md) | SR_ShardManager schedules | minor | DeleteInstance destroys the running job copy as IScheduleJob |
+| [SM-133](SM-133.md) | SR_ShardManager schedules | minor | The "WorkingStateWhenServiceStart is not exist" log passes the string object for %s |
+| [SM-134](SM-134.md) | SR_ShardManager temple gates | cosmetic | The Anubis and Isis temple opening is logged as "Anubis And Neith" |
+| [SM-135](SM-135.md) | SR_ShardManager server events | minor | Completion and reward message leaks on the error returns |
+| [SM-136](SM-136.md) | SR_ShardManager server events | cosmetic | The remaining reward time update logs a failed delete |
+| [SM-137](SM-137.md) | SR_ShardManager server events | minor | The delayed job heap is ordered by the delay, not by the due time |
+| [SM-138](SM-138.md) | SR_ShardManager server events | major | A failed load frees records that loaded events already hold |
+| [SM-139](SM-139.md) | SR_ShardManager server events | major | A recycled CServerEvent cannot be attached again |
+| [SM-140](SM-140.md) | SR_ShardManager server events | minor | The record is used after it went back to its table |
+| [SM-141](SM-141.md) | SR_ShardManager server events | minor | A missing event is handed to the end log as NULL |
+| [SM-142](SM-142.md) | SR_ShardManager server events | minor | DeleteServerEvent loses the event on its late failures |
+| [SM-143](SM-143.md) | SR_ShardManager server events | minor | AllocNewServerEventReward leaks on its failures |
+| [SM-144](SM-144.md) | SR_ShardManager server events | minor | SyncData leaves the stream writer bound on its early returns |
+| [SM-145](SM-145.md) | SR_ShardManager schedules | minor | The running copy of a schedule job is never freed |
 | [SM-160](SM-160.md) | SR_ShardManager siege fortress | minor | Siege fortress relay broadcasts the received message and leaks the relay |
 | [SM-161](SM-161.md) | SR_ShardManager flag world | minor | Flag world level request keeps the JID of a participant who went offline |
 | [SM-162](SM-162.md) | SR_ShardManager battle arena | major | Battle arena check answer is not range checked |
