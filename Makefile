@@ -507,6 +507,13 @@ SHARD_SCHED_OBJS = $(OBJ)\ShardManager\ShardSchedule.obj \
 
 shard_sched: $(OBJ)\ShardManager $(SHARD_SCHED_OBJS) $(OBJ)\ShardManager\ShardScheduleJob.obj
 
+# SR_ShardManager server events (CServerEvent, CServerEventReward, the delayed jobs and
+# CServerEventMgr). "nmake shard_server_event" compiles them.
+SHARD_SERVER_EVENT_OBJS = $(OBJ)\ShardManager\ServerEvent.obj \
+	$(OBJ)\ShardManager\ServerEventMgr.obj
+
+shard_server_event: $(OBJ)\ShardManager $(SHARD_SERVER_EVENT_OBJS)
+
 {JMX_CommonServers\GlobalManager\Billing}.cpp{$(OBJ)\GlobalManager}.obj:
 	cl $(CFLAGS) $(GLOBAL_DEFS) /Fo$@ /Fd$(OBJ)\GlobalManager\ $<
 
