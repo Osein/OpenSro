@@ -502,7 +502,8 @@ shard_world: $(OBJ)\ShardManager $(SHARD_WORLD_OBJS)
 
 # SR_ShardManager schedules (CShard_ScheduleManager, the schedule jobs, the temple gates);
 # "nmake shard_sched" compiles them.
-SHARD_SCHED_OBJS = $(OBJ)\ShardManager\ShardSchedule.obj
+SHARD_SCHED_OBJS = $(OBJ)\ShardManager\ShardSchedule.obj \
+	$(OBJ)\ShardManager\ShardScheduleJobs.obj
 
 $(OBJ)\ShardManager:
 	@if not exist $@ mkdir $@
