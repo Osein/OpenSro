@@ -8,8 +8,10 @@
 #include "BSNet/NetEngine.h"
 #include "ServerCommon/ReferenceData.h"
 #include "ServerFramework/CertArch.h"
+#include "ServerFramework/MassiveMsg.h"
 #include "ServerFramework/ServerBody.h"
 #include "ServerFramework/ServerDataExtern.h"
+#include "ShardManager/ShardScheduleExtern.h"
 #include "ShardManager/ShardWorld1Extern.h"
 #include "ShardManager/ShardWorldExtern.h"
 
@@ -418,6 +420,27 @@ void CClientManager::TickUserTimeouts()
         }
         it = itNext;
     }
+}
+
+bool CClientManager::SerializeUserList(ServerFramework::CMassiveMsg* pMsg)
+{
+    WORD wCount = (WORD)m_hmapUserByJID.size();
+    if (!wCount)
+        return false;
+    pMsg->Write(Shard_GetServerBodyOfMyself()->pShard, 2);
+    pMsg->Write(&wCount, 2);
+    for (stdext::hash_map<DWORD, CUser*>::iterator it = m_hmapUserByJID.begin();
+         it != m_hmapUserByJID.end(); ++it)
+    {
+        sUserLoginInfo& info = it->second->m_LoginInfo;
+        pMsg->Write(&info.dw018, 4);
+        pMsg->Write(&info.dwJID, 4);
+        pMsg->WriteString(info.strAccountID.c_str());
+        pMsg->Write(&info.wAgentBodyID, 2);
+        pMsg->Write(&info.dw170, 6);
+        pMsg->Write(&info.w176, 2);
+    }
+    return true;
 }
 
 void CClientManager::SetPlayTimeFlag(WORD wFlag)

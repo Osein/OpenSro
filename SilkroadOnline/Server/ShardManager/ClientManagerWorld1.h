@@ -204,6 +204,10 @@ public:
     void OnAgentServerDown(SERVER_CORD* pCord);
     // CClientManager::TickUserTimeouts (0x405850, every 5 seconds)
     void TickUserTimeouts();
+    // CClientManager::SerializeUserList (0x4058f0, CMainProcess::vf43): the shard ID, the user
+    // count and per user dw018, JID, account ID, agent body, +0x170 (6 bytes) and the play
+    // time. FALSE (nothing written) without users.
+    bool SerializeUserList(ServerFramework::CMassiveMsg* pMsg);
     // CClientManager::ForEachUser_Set231F (0x4059e0) / ForEachUser_42AC20 (0x405a50)
     void SetPlayTimeFlag(WORD wFlag);
     void AddPlayTime(BYTE bySeconds);
