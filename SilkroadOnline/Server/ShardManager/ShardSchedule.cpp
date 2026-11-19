@@ -99,7 +99,8 @@ void CShard_ScheduleManager::OnScheduleEvent(sScheduleEvent& event)
     {
         BroadcastSchedule(info);
         std::string strDefine = pGroup->GetDefineName();
-        LogPrintf(ShardScheduleLogFlags(), "Schedule Manager : Schedule processing (%d) ! - %s - %d",
+        LogPrintf(ShardScheduleLogFlags(),
+                  "Schedule Manager : Schedule processing (%d) ! - %s - %d",
                   event.bBegin, strDefine.c_str(), event.dwScheduleID);
     }
     else
