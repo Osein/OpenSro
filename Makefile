@@ -517,7 +517,8 @@ shard_server_event: $(OBJ)\ShardManager $(SHARD_SERVER_EVENT_OBJS)
 # SR_ShardManager association reputation, the log jobs of the server events and schedules, the
 # guild siege authority and the world parts of the main process, client manager and user.
 # "nmake shard_world1" compiles them.
-SHARD_WORLD1_OBJS = $(OBJ)\ShardManager\AssociationReputation.obj
+SHARD_WORLD1_OBJS = $(OBJ)\ShardManager\AssociationReputation.obj \
+	$(OBJ)\ShardManager\ShardLogJobs.obj
 
 shard_world1: $(OBJ)\ShardManager $(SHARD_WORLD1_OBJS)
 
