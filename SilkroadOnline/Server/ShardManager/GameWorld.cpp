@@ -287,7 +287,7 @@ BYTE CGameWorld::EnterLayer(WORD wLayerID, CUser* pUser)
         return 6;
     }
     DWORD dwCharID = pUser->GetCharID();
-    UserGameWorldPos* pPos = User_GetGameWorldPos(pUser);
+    GameWorldContext* pPos = User_GetGameWorldPos(pUser);
     if (pLayer->m_mapMember.find(dwCharID) != pLayer->m_mapMember.end() || !pPos)
     {
         BSAssertFail();
@@ -587,7 +587,7 @@ BYTE CGameWorldMgr::EnterWorld(CUser* pUser, DWORD dwWorldLayer)
 
 BYTE CGameWorldMgr::OnUserLogout(CUser* pUser)
 {
-    UserGameWorldPos* pPos = User_GetGameWorldPos(pUser);
+    GameWorldContext* pPos = User_GetGameWorldPos(pUser);
     if (!pPos->pGameWorld)
         return 2;
     CGameWorld* pWorld = FindWorld(pPos->wWorldID);

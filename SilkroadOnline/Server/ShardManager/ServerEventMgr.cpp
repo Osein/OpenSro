@@ -67,14 +67,6 @@ static int ServerEvent_SecondsUntil(const TIMESTAMP_STRUCT& ts)
     return ServerEvent_DiffSeconds(tsNow, tsTarget);
 }
 
-// CDBObjectList_DetachAndClear (0x40a7e0): every record of the list back to the table.
-static void ServerEvent_FreeRecordList(CDBRecordList& list, CDBTable* pTable)
-{
-    for (CDBRecordList::iterator it = list.begin(); it != list.end(); ++it)
-        pTable->FreeRecord(*it);
-    list.clear();
-}
-
 static CMsg* ServerEvent_AllocMsg()
 {
     CMsg* pMsg = g_pNetEngine->AllocMsg(FALSE);
@@ -155,7 +147,7 @@ BOOL CServerEventMgr::LoadServerEvents()
     }
     if (!g_pShardDB)
         BSAssertFail();
-    CDBTable* pTable = ShardDB_GetTable(g_pShardDB, SHARD_TABLE_SERVER_EVENT);
+    CDBTable* pTable = g_pShardDB->GetTable(SHARD_TABLE_SERVER_EVENT);
     if (!pTable)
     {
         BSAssertFail();
@@ -164,7 +156,7 @@ BOOL CServerEventMgr::LoadServerEvents()
     CDBRecordList list;
     if (!pTable->SelectAll(6, &list))
     {
-        ServerEvent_FreeRecordList(list, pTable);
+        CDBObjectList_DetachAndClear(&list, pTable);
         BSAssertFail();
         return FALSE;
     }
@@ -229,7 +221,7 @@ failed:
     // BUG(SM-138): every record of the list goes back to the table, also the ones the events
     // registered before hold.
     BSAssertFail();
-    ServerEvent_FreeRecordList(list, pTable);
+    CDBObjectList_DetachAndClear(&list, pTable);
     return FALSE;
 }
 
@@ -237,7 +229,7 @@ BOOL CServerEventMgr::LoadServerEventRewards()
 {
     if (!g_pShardDB)
         BSAssertFail();
-    std::vector<CDBTable*>& vecTable = ShardDB_GetTables(g_pShardDB);
+    std::vector<CDBTable*>& vecTable = g_pShardDB->GetInstanceTables();
     if (vecTable.empty() || vecTable.size() <= SHARD_TABLE_SERVER_EVENT_REWARD)
     {
         BSAssertFail();
@@ -253,7 +245,7 @@ BOOL CServerEventMgr::LoadServerEventRewards()
     CDBRecordList list;
     if (!pTable->SelectAll(1, &list))
     {
-        ServerEvent_FreeRecordList(list, pTable);
+        CDBObjectList_DetachAndClear(&list, pTable);
         BSAssertFail();
         return FALSE;
     }
@@ -297,7 +289,7 @@ BOOL CServerEventMgr::LoadServerEventRewards()
 failed:
     // BUG(SM-138): as LoadServerEvents.
     BSAssertFail();
-    ServerEvent_FreeRecordList(list, pTable);
+    CDBObjectList_DetachAndClear(&list, pTable);
     return FALSE;
 }
 
@@ -457,7 +449,7 @@ BOOL CServerEventMgr::ProcessingDelayJob_CompletionAndReward(DWORD dwServerEvent
     // BUG(SM-135): the error returns below leave the message allocated.
     if (byRewardTarget == SERVER_EVENT_TARGET_USER)
     {
-        CUser* pUser = ClientManager_FindUserByJID(dwUserJID);
+        CUser* pUser = GetSingleton_CClientManager()->FindUserByJID(dwUserJID);
         if (!pUser)
         {
             LogPrintf(0x2000001,
@@ -466,7 +458,7 @@ BOOL CServerEventMgr::ProcessingDelayJob_CompletionAndReward(DWORD dwServerEvent
             BSAssertFail();
             return FALSE;
         }
-        const char* pszName = User_GetCharName(pUser);
+        const char* pszName = pUser->GetCharName();
         pMsg->Write<DWORD>(dwUserJID);
         *pMsg << pszName;
     }
@@ -781,7 +773,7 @@ CServerEventReward* CServerEventMgr::AllocNewServerEventReward(DWORD dwServerEve
 {
     if (!g_pShardDB)
         BSAssertFail();
-    std::vector<CDBTable*>& vecTable = ShardDB_GetTables(g_pShardDB);
+    std::vector<CDBTable*>& vecTable = g_pShardDB->GetInstanceTables();
     if (vecTable.empty() || vecTable.size() <= SHARD_TABLE_SERVER_EVENT_REWARD)
     {
         BSAssertFail();

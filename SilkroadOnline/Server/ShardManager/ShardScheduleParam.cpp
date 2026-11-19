@@ -14,9 +14,11 @@ BOOL ScheduleParam_BuildOpenTimeList(const std::string& strParam, sTempleOpenSch
     {
         if (params.at(i).first == "WORLD_OPEN_TIME")
         {
-            DWORD dwTime = dwBegin + 60 * atol(params.at(i).second.c_str());
-            pOpen->lstTime.push_back(dwTime);
-            pOpen->dwOpenTime = dwTime;
+            sTempleOpenTime entry;
+            entry.dwTime = dwBegin + 60 * atol(params.at(i).second.c_str());
+            entry.bOpen = 1;
+            pOpen->m_list.push_back(entry);
+            pOpen->m_dwOpenTime = entry.dwTime;
             bFound = TRUE;
         }
     }
@@ -26,9 +28,14 @@ BOOL ScheduleParam_BuildOpenTimeList(const std::string& strParam, sTempleOpenSch
     for (size_t i = 0; i < params.size(); ++i)
     {
         if (params.at(i).first == "NOTIFY_BEFORE_OPEN")
-            pOpen->lstTime.push_back(pOpen->dwOpenTime - 60 * atol(params.at(i).second.c_str()));
+        {
+            sTempleOpenTime entry;
+            entry.dwTime = pOpen->m_dwOpenTime - 60 * atol(params.at(i).second.c_str());
+            entry.bOpen = 0;
+            pOpen->m_list.push_back(entry);
+        }
     }
-    pOpen->lstTime.sort();
+    pOpen->m_list.sort();
     return TRUE;
 }
 

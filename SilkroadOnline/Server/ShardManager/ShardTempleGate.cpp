@@ -6,6 +6,7 @@
 #include "BSNet/Msg.h"
 #include "ServerCommon/ReferenceData.h"
 #include "ServerFramework/ServerDataExtern.h"
+#include "ShardManager/AssociationReputation.h"
 #include "ShardManager/GameWorld.h"
 #include "ShardManager/ShardScheduleExtern.h"
 
@@ -431,7 +432,7 @@ void CShardSJ_TempleOfAnubisAndIsisGate::OpenTemples()
     if (!m_pLayerAnubis || !m_pLayerIsis)
         return;
     BS_ASSERT(g_pAssociationReputationMgr);
-    if (!AssociationReputationMgr_DecideTempleWinner(g_pAssociationReputationMgr, 0))
+    if (!g_pAssociationReputationMgr->DecideTempleWinner(0))
         return;
     sSchedulePeriod next;
     if (!GetNextTemplePeriod(s_szDefineAnubisAndIsis, &next))
@@ -443,7 +444,7 @@ void CShardSJ_TempleOfAnubisAndIsisGate::OpenTemples()
     info.bBegin = 2;
     BeginNotify(&info);
     BS_ASSERT(g_pAssociationReputationMgr);
-    BYTE byWinner = (BYTE)AssociationReputationMgr_GetWinner28(g_pAssociationReputationMgr);
+    BYTE byWinner = (BYTE)g_pAssociationReputationMgr->GetAnubisWinner();
     WriteByte(m_pNotifyMsg, 2);
     WriteOpenedLayer(m_pNotifyMsg, pAnubis, m_pLayerAnubis);
     WriteOpenedLayer(m_pNotifyMsg, pIsis, m_pLayerIsis);
@@ -517,7 +518,7 @@ void CShardSJ_TempleOfHaroerisGate::OpenTemples()
     if (!m_pLayer)
         return;
     BS_ASSERT(g_pAssociationReputationMgr);
-    if (!AssociationReputationMgr_DecideTempleWinner(g_pAssociationReputationMgr, 1))
+    if (!g_pAssociationReputationMgr->DecideTempleWinner(1))
         return;
     sSchedulePeriod next;
     if (!GetNextTemplePeriod(s_szDefineHaroerisAndSeth, &next))
@@ -529,7 +530,7 @@ void CShardSJ_TempleOfHaroerisGate::OpenTemples()
     info.bBegin = 2;
     BeginNotify(&info);
     BS_ASSERT(g_pAssociationReputationMgr);
-    BYTE byWinner = (BYTE)AssociationReputationMgr_GetWinner2C(g_pAssociationReputationMgr);
+    BYTE byWinner = (BYTE)g_pAssociationReputationMgr->GetHaroerisWinner();
     WriteByte(m_pNotifyMsg, 2);
     WriteOpenedLayer(m_pNotifyMsg, pHaroeris, m_pLayer);
     WriteByte(m_pNotifyMsg, byWinner);

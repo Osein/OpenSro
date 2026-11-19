@@ -11,6 +11,7 @@
 #include "ServerFramework/MassiveMsg.h"
 #include "ServerFramework/ServerBody.h"
 #include "ServerFramework/ServerDataExtern.h"
+#include "ShardManager/GMLevelManager.h"
 #include "ShardManager/ShardScheduleExtern.h"
 #include "ShardManager/ShardWorld1Extern.h"
 #include "ShardManager/ShardWorldExtern.h"
@@ -39,11 +40,11 @@ void GameWorldContext_Reset(GameWorldContext* pContext)
     pContext->fX = 0.0f;
     pContext->wRegionID = 0;
     pContext->dwCreateTime = 0;
-    pContext->dw24 = 0;
+    pContext->pGameWorld = NULL;
 }
 
 void GameWorldContext_SetFromCharPos(GameWorldContext* pContext,
-                                     const GameWorldCharRecordPos* pChar)
+                                     const GameWorldCharPos* pChar)
 {
     pContext->wWorldID = pChar->wWorldID;
     pContext->wLayerID = pChar->wLayerID;
@@ -161,26 +162,29 @@ void CUser::NotifyStartPlayTime()
 }
 
 // ShardMgr8A894C_CheckByte141 (0x42ab90, CGameWorld::CheckLayerCapacity): the GM level of the
-// account on the GM level manager.
+// account on the GM level manager (asserted). The original hands the byte over in AL, the rest
+// of EAX holding the upper bytes of pUser; here it is zero-extended.
 BOOL User_HasGMLevelForIP(CUser* pUser)
 {
-    return GMLevelManager_HasGMLevelForIP(pUser->m_LoginInfo.b015);
+    if (!g_pGMLevelManager)
+        BSAssertFail();
+    return g_pGMLevelManager->HasGMLevelForIP(pUser->m_LoginInfo.b015);
 }
 
 // The accessors the other groups declared for the CUser owner.
-DWORD User_GetCharID(const CUser* pUser)
+DWORD CUser::GetCharID() const
 {
-    return pUser->m_LoginInfo.dwCharID;
+    return m_LoginInfo.dwCharID;
 }
 
-UserGameWorldPos* User_GetGameWorldPos(CUser* pUser)
+const std::string& CUser::GetCharNameStr() const
 {
-    return (UserGameWorldPos*)&pUser->m_GameWorld;
+    return m_LoginInfo.strCharName;
 }
 
-const char* User_GetCharName(CUser* pUser)
+GameWorldContext* User_GetGameWorldPos(CUser* pUser)
 {
-    return pUser->m_LoginInfo.strCharName.c_str();
+    return &pUser->m_GameWorld;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -190,13 +194,6 @@ CClientManager::~CClientManager()
 {
     // The original clears the pointer after the members are gone.
     g_pClientManager = NULL;
-}
-
-CUser* ClientManager_FindUserByJID(DWORD dwJID)
-{
-    if (!g_pClientManager)
-        BSAssertFail();
-    return g_pClientManager->FindUserByJID(dwJID);
 }
 
 CUser* CClientManager::FindUserByJID(DWORD dwJID)

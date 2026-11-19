@@ -74,7 +74,7 @@ void Guild_ResetSiegeAuthority(CGuild* pGuild)
     if (!g_pShardDB)
         BSAssertFail();
     int nReturn = 0;
-    CDatabase::ExecDirectWithReturnValue(ShardDB_GetSession(g_pShardDB), 7, szQuery, 3, &nReturn);
+    CDatabase::ExecDirectWithReturnValue(g_pShardDB->GetSession(), 7, szQuery, 3, &nReturn);
     if (nReturn == -1)
     {
         std::string strName(pGuild->m_pRecord->Name);
@@ -134,7 +134,7 @@ WORD Guild_SetMemberSiegeAuthority(CGuild* pGuild, DWORD dwCharID, BYTE byAuthor
         return GUILD_ERR_MEMBER_NOT_FOUND_WORLD1;
     if (!g_pShardDB)
         BSAssertFail();
-    if (!ShardDB_GetTable(g_pShardDB, SHARD_TABLE_GUILD_MEMBER))
+    if (!g_pShardDB->GetTable(SHARD_TABLE_GUILD_MEMBER))
         return GUILD_ERR_FAILED_WORLD1;
 
     CGuildMember* pMember = it->second;
@@ -144,7 +144,7 @@ WORD Guild_SetMemberSiegeAuthority(CGuild* pGuild, DWORD dwCharID, BYTE byAuthor
         return GUILD_ERR_FAILED_WORLD1;
     if (!g_pShardDB)
         BSAssertFail();
-    if (CDatabase::ExecDirectWithReturnValue(ShardDB_GetSession(g_pShardDB), 7, strQuery.c_str(),
+    if (CDatabase::ExecDirectWithReturnValue(g_pShardDB->GetSession(), 7, strQuery.c_str(),
                                              0, NULL) & ~1)
     {
         return GUILD_ERR_FAILED_WORLD1;

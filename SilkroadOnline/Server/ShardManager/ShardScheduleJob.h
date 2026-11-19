@@ -21,28 +21,36 @@ class GameWorldLayer;
 // ShardSchedule.h) and writes a _LogSchedule row at begin and end. The temple gate jobs are in
 // ShardTempleGate.h. Slot 7 (OnEnd) returns a BOOL in the original that nobody reads.
 //
-// Handlers marked "SM_world4" / "SM_world5" are provided by that group.
+// The flag world jobs run in FlagWorld.cpp, the battle arena jobs in BattleArena.cpp.
 
 // ---------------------------------------------------------------------------------------------
-// Provided by SM_world1 / SM_main
+// Provided by SM_main
 
 // dword_8588B4 (SM_main): the server ID WORD of this module (the body of this server), NULL
 // before it is known.
 extern WORD* g_pwShardServerID;
 
-// Schedule_InsertLogAsync (0x473880, SM_world1): INSERT into _LogSchedule through an AQ job.
-void Schedule_InsertLogAsync(std::string strModule, int nServerID, std::string strDefine,
-                             DWORD dwScheduleID, std::string strState);
-// UniqueSpawn_BroadcastL3Uniques_34BB (0x414450, SM_main).
-void UniqueSpawn_BroadcastL3Uniques_34BB(BYTE byFlag);
+// An entry of the open list (8 bytes): a notice (bOpen 0) or the opening (1) at dwTime.
+struct sTempleOpenTime
+{
+    DWORD   dwTime;
+    BYTE    bOpen;
+};
 
-// The open times of a temple gate job (the list +0 and the open time +C of the job member the
-// temple gate jobs pass).
+// The list sort (0x666bc0): by time.
+inline bool operator<(const sTempleOpenTime& left, const sTempleOpenTime& right)
+{
+    return left.dwTime < right.dwTime;
+}
+
+// The open list and the opening time (job +78 / +84; filled by ScheduleParam_BuildOpenTimeList).
 struct sTempleOpenSchedule
 {
-    std::list<DWORD>    lstTime;            // +0   open time and the notices before it
-    DWORD               dwOpenTime;         // +C
+    std::list<sTempleOpenTime>  m_list;         // +00
+    DWORD                       m_dwOpenTime;   // +0C
 };
+
+C_ASSERT(sizeof(sTempleOpenSchedule) == 0x10);
 
 // ---------------------------------------------------------------------------------------------
 // The schedule parameter helpers of the temple gate jobs (ShardScheduleParam.cpp)

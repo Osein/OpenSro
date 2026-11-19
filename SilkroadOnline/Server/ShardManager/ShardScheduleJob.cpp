@@ -6,6 +6,8 @@
 #include "ServerFramework/ServerDataExtern.h"
 #include "ServerCommon/ReferenceData.h"
 #include "ShardManager/GameWorld.h"
+#include "ShardManager/MainProcessWorld1.h"
+#include "ShardManager/ShardLogJobs.h"
 #include "ShardManager/ShardScheduleExtern.h"
 #include "ShardManager/ShardWorldExtern.h"
 #include "ShardManager/SiegeFortress.h"

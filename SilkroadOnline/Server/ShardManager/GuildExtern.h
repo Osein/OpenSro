@@ -48,12 +48,3 @@ public:
     // trs_guild_job_PoolAlloc_4204B0 (0x4204b0)
     static trs_guild_job* Alloc();
 };
-
-// ---------------------------------------------------------------------------------------------
-// Provided by SM_main: characters.
-class CCharacter
-{
-public:
-    // The record at +4.
-    CInstancePC* GetPCRecord() const;
-};

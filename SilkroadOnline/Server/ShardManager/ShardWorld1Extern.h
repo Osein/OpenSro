@@ -12,47 +12,16 @@
 #include "BSLib/Util/TimeSpan.h"
 #include "ServerFramework/OverlapJob.h"
 #include "ShardManager/ServerEventExtern.h"
+#include "ShardManager/ShardAdminExtern.h"
 
 // What the association reputation, the log jobs and the other SM_world1 parts use from parts of
 // SR_ShardManager that are ported elsewhere. Only the calls made here are declared; the owners
-// replace these declarations. g_pShardDB, ShardDB_GetTables and MainProcess_PostDBJob come from
-// ServerEventExtern.h, g_pMainProcess and CMainProcess from ShardWorldExtern.h.
+// replace these declarations. CShardDB, g_pMainProcess and CMainProcess come from ShardExtern.h,
+// MainProcess_PostDBJob from ServerEventExtern.h, the AQ jobs from ShardAdminExtern.h.
 
 class CDBTable;
 class CMainProcess;
 class CMsg;
-
-// The shard DB table of nIndex as the callers read it (the inlined vector access with its
-// checks): asserts and gives NULL when the table vector does not reach the index.
-inline CDBTable* ShardWorld1_GetTable(unsigned int nIndex)
-{
-    if (!g_pShardDB)
-        BSAssertFail();
-    std::vector<CDBTable*>& vecTables = ShardDB_GetTables(g_pShardDB);
-    if (!vecTables.empty() && vecTables.size() > nIndex)
-        return vecTables[nIndex];
-    BSAssertFail();
-    return NULL;
-}
-
-// CDBObjectList_DetachAndClear (0x40a7e0, shard DB group): every record of the list back to the
-// table.
-inline void ShardWorld1_FreeRecordList(CDBRecordList& list, CDBTable* pTable)
-{
-    for (CDBRecordList::iterator it = list.begin(); it != list.end(); ++it)
-        pTable->FreeRecord(*it);
-    list.clear();
-}
-
-// ---------------------------------------------------------------------------------------------
-// Provided by SM_admin (the AQ job classes; AQBase.h, AdminQueryJobs.h)
-
-// AQ_AssociationReputation::Alloc (UserCertifier_AllocJob_465460).
-ServerFramework::COverlapJob* AQ_AssociationReputation_Alloc();
-// AQ_ServerEventLog::Alloc (0x47b1b0, CChunkAllocatorST_AQ_ServerEventLog::AllocJob).
-ServerFramework::COverlapJob* AQ_ServerEventLog_Alloc();
-// AQ_ScheduleInsertLog::Alloc (CChunkAllocatorST_AQ_ScheduleInsertLog::AllocJob).
-ServerFramework::COverlapJob* AQ_ScheduleInsertLog_Alloc();
 
 // ---------------------------------------------------------------------------------------------
 // Provided by SM_main3 (the statement builders of the AQ jobs)
@@ -94,10 +63,8 @@ const BYTE* MeterRateConfig_GetStatic();
 void DB_AddLogChar(int nCharID, int nJID, int nParam, BYTE byEventID, int nData);
 
 // ---------------------------------------------------------------------------------------------
-// Provided by SM_main3 / the party group (CUser, CGMLevelManager)
+// Provided by SM_main3 (CUser)
 
 class CUser;
 // CUser_SetPlayTimeFlagAndSend (CMainProcess::OnMsg_231F per user).
 void CUser_SetPlayTimeFlagAndSend(WORD wFlag, CUser* pUser);
-// CGMLevelManager_HasGMLevelForIP (0x61be20) on dword_8A894C (asserted when there is none).
-BOOL GMLevelManager_HasGMLevelForIP(BYTE byLevel);

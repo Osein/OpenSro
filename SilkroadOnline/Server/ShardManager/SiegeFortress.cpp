@@ -11,6 +11,7 @@
 #include "BSNet/Msg.h"
 #include "ServerFramework/MassiveMsg.h"
 #include "ServerFramework/ServerDataExtern.h"
+#include "ShardManager/GuildSiegeAuthority.h"
 #include "ShardManager/ShardSchedule.h"
 #include "ShardManager/ShardWorldExtern.h"
 

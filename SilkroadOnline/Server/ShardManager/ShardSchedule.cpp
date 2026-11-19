@@ -147,7 +147,7 @@ static void PrepareScheduleQuery(CDBQuery& query, ServerFramework::CTrigger* pTr
 {
     memset(&query, 0, sizeof(query));
     BS_ASSERT(g_pShardDB);
-    query.m_pSession = ShardDB_GetSession(g_pShardDB);
+    query.m_pSession = g_pShardDB->GetSession();
     query.m_pTrigger = pTrigger;
     query.m_nSession = 6;
     query.m_dwParam = (DWORD)pRow;

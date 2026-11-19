@@ -43,7 +43,7 @@ static void ServerEvent_PostJob(AQ_ServerEvent* pJob)
 // table list is too short.
 static BOOL ServerEvent_GetTable(int nIndex, CDBTable** ppTable)
 {
-    std::vector<CDBTable*>& vecTable = ShardDB_GetTables(g_pShardDB);
+    std::vector<CDBTable*>& vecTable = g_pShardDB->GetInstanceTables();
     if (vecTable.empty() || vecTable.size() <= (size_t)nIndex)
         return FALSE;
     *ppTable = vecTable[nIndex];

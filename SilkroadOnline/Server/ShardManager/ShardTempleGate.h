@@ -20,28 +20,6 @@ struct RefGameWorld;
 //     close:  BYTE 3, per world WORD world ID + WORD layer ID, then BYTE 2 3 (Selkis and
 //             Neith), 0 0 (Anubis and Isis) or 1 0 (Haroeris)
 
-// An entry of the open list (8 bytes): a notice (bOpen 0) or the opening (1) at dwTime.
-struct sTempleOpenTime
-{
-    DWORD   dwTime;
-    BYTE    bOpen;
-};
-
-// The list sort (0x666bc0): by time.
-inline bool operator<(const sTempleOpenTime& left, const sTempleOpenTime& right)
-{
-    return left.dwTime < right.dwTime;
-}
-
-// The open list and the opening time (job +78 / +84; filled by ScheduleParam_BuildOpenTimeList).
-struct sTempleOpenSchedule
-{
-    std::list<sTempleOpenTime>  m_list;         // +00
-    DWORD                       m_dwOpenTime;   // +0C
-};
-
-C_ASSERT(sizeof(sTempleOpenSchedule) == 0x10);
-
 // The common part of the three gates. TJob supplies TICK_GATE, s_pszNoticeLog, s_pszOpenLog
 // and OpenTemples.
 template <class TJob>

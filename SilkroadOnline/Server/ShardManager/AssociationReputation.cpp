@@ -41,7 +41,7 @@ CInstanceAssociatedReputation* CAssociationReputationMgr::SelectAssociation(
 {
     if (!g_pShardDB)
         BSAssertFail();
-    std::vector<CDBTable*>& vecTables = ShardDB_GetTables(g_pShardDB);
+    std::vector<CDBTable*>& vecTables = g_pShardDB->GetInstanceTables();
     if (vecTables.empty() || vecTables.size() <= SHARD_TABLE_ASSOCIATION_REPUTATION)
     {
         BSAssertFail();
@@ -66,7 +66,7 @@ CInstanceAssociatedReputation* CAssociationReputationMgr::SelectAssociation(
     }
     if (!pTable->SelectWhere(szClause, 6, &list, 0))
     {
-        ShardWorld1_FreeRecordList(list, pTable);
+        CDBObjectList_DetachAndClear(&list, pTable);
         BSAssertFail();
         return NULL;
     }
@@ -258,21 +258,6 @@ BOOL CAssociationReputationMgr::DecideTempleWinner(int nTemple)
 void AssociationReputationMgr_LoadAssociations()
 {
     GetSingleton_CAssociationReputationMgr()->LoadAssociations();
-}
-
-BOOL AssociationReputationMgr_DecideTempleWinner(CAssociationReputationMgr* pMgr, int nTemple)
-{
-    return pMgr->DecideTempleWinner(nTemple);
-}
-
-int AssociationReputationMgr_GetWinner28(CAssociationReputationMgr* pMgr)
-{
-    return pMgr->GetAnubisWinner();
-}
-
-int AssociationReputationMgr_GetWinner2C(CAssociationReputationMgr* pMgr)
-{
-    return pMgr->GetHaroerisWinner();
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -1,6 +1,5 @@
 // AQ_SiegeDataUpdater::ExecuteAndReply (0x401990) and its two game server notifications. The
-// class belongs to SM_admin (AdminQueryJobs.h); the declaration below carries only the members
-// used here and is replaced by AdminQueryJobs.h when the branches meet.
+// class belongs to SM_admin; its stand-in is in ShardAdminExtern.h.
 
 #include <winsock2.h>
 #include <windows.h>
@@ -10,43 +9,10 @@
 #include "BSLib/BSDebug.h"
 #include "BSNet/Msg.h"
 #include "BSNet/NetEngine.h"
-#include "ServerCommon/InstanceRecords.h"
 #include "ServerFramework/MassiveMsg.h"
+#include "ShardManager/ShardAdminExtern.h"
 #include "ShardManager/ShardWorld1Extern.h"
 #include "ShardManager/ShardWorldExtern.h"
-
-// ---------------------------------------------------------------------------------------------
-// Provided by SM_admin (AdminQueryJobs.h): AQ_SiegeDataUpdater (0x118 bytes)
-
-class AQ_SiegeDataUpdater
-{
-public:
-    // Provided by SM_world1 (0x401990): updates the record, writes the answer and notifies the
-    // game servers (0x3542).
-    bool ExecuteAndReply();
-
-public:
-    BYTE                            m_abBase[0x20];         // +00 AQ_Base
-    BYTE                            m_byResult;             // +20
-    BYTE                            m_ab21[0x2B];           // +21
-    ServerFramework::CMassiveMsg*   m_pResponse;            // +4C
-    BYTE                            m_byQueryTarget;        // +50  0 introduction, 1 permission
-    BYTE                            m_byIntroPermission;    // +51
-    DWORD                           m_dwFortressID;         // +54
-    std::string                     m_strDesc;              // +58
-    std::string                     m_strIntroduction;      // +74
-    std::string                     m_str90;                // +90
-    CInstanceSiegeFortress          m_Fortress;             // +B0
-};
-
-C_ASSERT(FIELD_OFFSET(AQ_SiegeDataUpdater, m_byResult) == 0x20);
-C_ASSERT(FIELD_OFFSET(AQ_SiegeDataUpdater, m_pResponse) == 0x4C);
-C_ASSERT(FIELD_OFFSET(AQ_SiegeDataUpdater, m_dwFortressID) == 0x54);
-C_ASSERT(FIELD_OFFSET(AQ_SiegeDataUpdater, m_strIntroduction) == 0x74);
-C_ASSERT(FIELD_OFFSET(AQ_SiegeDataUpdater, m_Fortress) == 0xB0);
-C_ASSERT(sizeof(AQ_SiegeDataUpdater) == 0x118);
-
-// ---------------------------------------------------------------------------------------------
 
 enum
 {
@@ -94,12 +60,12 @@ bool AQ_SiegeDataUpdater::ExecuteAndReply()
     int nResult = 0;
     if (m_byQueryTarget == 0)
     {
-        nResult = m_Fortress.Update(ShardWorld1_GetTable(SHARD_TABLE_SIEGE_FORTRESS),
+        nResult = m_Fortress.Update(GetSingleton_CShardDB()->GetTable(SHARD_TABLE_SIEGE_FORTRESS),
                                     SIEGE_FORTRESS_GROUP_INTRODUCTION);
     }
     else if (m_byQueryTarget == 1)
     {
-        nResult = m_Fortress.Update(ShardWorld1_GetTable(SHARD_TABLE_SIEGE_FORTRESS),
+        nResult = m_Fortress.Update(GetSingleton_CShardDB()->GetTable(SHARD_TABLE_SIEGE_FORTRESS),
                                     SIEGE_FORTRESS_GROUP_INTRO_PERMISSION);
     }
     if (nResult & ~1)

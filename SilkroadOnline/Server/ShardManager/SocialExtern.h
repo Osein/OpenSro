@@ -73,7 +73,7 @@ trs_messenger_job* trs_messenger_job_Alloc();
 trs_party_job* trs_party_job_Alloc();
 
 // ---------------------------------------------------------------------------------------------
-// Provided by SM_main (COverlappedJobMgr, CShardDB)
+// Provided by SM_main (COverlappedJobMgr; CShardDB is in ShardExtern.h)
 
 class COverlappedJobMgr
 {
@@ -85,24 +85,6 @@ public:
 // GetSingleton_COverlappedJobMgr (0x40baf0, g_pOverlappedJobMgr 0x8a8910)
 COverlappedJobMgr* GetSingleton_COverlappedJobMgr();
 
-class CShardDB
-{
-public:
-    // +0x08
-    CDBSessionMgr* GetSession();
-    // +0x18: the instance tables (index = slot; _Friend 0x14, _Memo 0x15)
-    std::vector<CDBTable*>& GetInstanceTables();
-    // CDBConnPool_GetConnAt (0x4013d0, also inlined): table nIndex of the table vector at
-    // +0x18; asserts and returns NULL when the vector is shorter.
-    CDBTable* GetTable(int nIndex);
-};
-
-// GetSingleton_CShardDB (0x401c10) asserts g_pShardDB (0x8a8948).
-extern CShardDB* g_pShardDB;
-CShardDB* GetSingleton_CShardDB();
-
-// CDBObjectList_DetachAndClear: frees every record of the list to pTable and clears it.
-void CDBObjectList_DetachAndClear(CDBRecordList* pList, CDBTable* pTable);
 
 enum
 {

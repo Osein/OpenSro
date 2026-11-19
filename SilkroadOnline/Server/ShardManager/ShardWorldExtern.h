@@ -17,44 +17,15 @@ class CGameWorld;
 // ---------------------------------------------------------------------------------------------
 // Provided by the CUser / CClientManager owner (SM_world1 / SM_main)
 
-// The game world position of a user (CUser + 0x1F0): set by CGameWorld::EnterLayer, read by
-// CGameWorldMgr::OnUserLogout.
-struct UserGameWorldPos
-{
-    DWORD           dw0;                // +0
-    WORD            wWorldID;           // +4   CUser + 0x1F4
-    WORD            wLayerID;           // +6   CUser + 0x1F6
-    DWORD           adw8[7];            // +8
-    CGameWorld*     pGameWorld;         // +24  CUser + 0x214
-};
-
-C_ASSERT(FIELD_OFFSET(UserGameWorldPos, pGameWorld) == 0x24);
-
-// &CUser + 0x1F0.
-UserGameWorldPos* User_GetGameWorldPos(CUser* pUser);
+// &CUser + 0x1F0 (GameWorldContext of ShardExtern.h).
+GameWorldContext* User_GetGameWorldPos(CUser* pUser);
 // ShardMgr8A894C_CheckByte141 (0x42ab90): the GM level check of the user's byte +141 on the GM
 // level manager (dword_8A894C, asserts when there is none).
 BOOL User_HasGMLevelForIP(CUser* pUser);
 
-// The character data CUser::SelectCharacter hands to CGameWorldMgr::IsCharInLayer.
-struct GameWorldCharPos
-{
-    BYTE            ab0[0x20];          // +0
-    WORD            wWorldID;           // +20
-    WORD            w22;                // +22
-    WORD            wLayerID;           // +24
-    WORD            w26;                // +26
-    WORD            awCreateTime[6];    // +28  packed with RefObj_PackTypeID
-};
-
-C_ASSERT(FIELD_OFFSET(GameWorldCharPos, awCreateTime) == 0x28);
 
 // ---------------------------------------------------------------------------------------------
 // Used by the flag world, the battle arena and the siege fortress (SM_world4)
-
-// Provided by the guild group: CGuildManager::ResetSiegeAuthority (0x43c5a0) on
-// GetSingleton_CGuildManager (0x40bab0).
-void GuildManager_ResetSiegeAuthority(DWORD dwGuildID);
 
 // Provided by SM_main: the siege schedule state of the main process (CMainProcess + 0x42310),
 // used by the siege jobs and CSiegeFortressMgr::InitSiegeScheduleTimes.

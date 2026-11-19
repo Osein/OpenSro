@@ -109,20 +109,19 @@ BOOL ServerEventLog_LogReward(DWORD dwJID, CServerEvent* pEvent)
     }
     else
     {
-        CUser* pUser = ClientManager_FindUserByJID(dwJID);
+        CUser* pUser = GetSingleton_CClientManager()->FindUserByJID(dwJID);
         if (!pUser)
         {
             BSAssertFail();
             return FALSE;
         }
-        // The game world context of the user (CUser + 0x1F0): region X / Z bytes at +10, the
-        // position at +14.
-        const BYTE* pContext = (const BYTE*)User_GetGameWorldPos(pUser);
-        const float* pfPos = (const float*)(pContext + 0x14);
+        // The game world context of the user (CUser + 0x1F0): region X / Z bytes, position.
+        const GameWorldContext* pContext = User_GetGameWorldPos(pUser);
         hr = StringCchPrintfA(szDesc, SHARD_LOG_TEXT_SIZE,
                               "CharName[%s] RegionXZ[%d,%d] Position[%0.2f, %0.2f, %0.2f]",
-                              User_GetCharName(pUser), pContext[0x10], pContext[0x11],
-                              (double)pfPos[0], (double)pfPos[1], (double)pfPos[2]);
+                              pUser->GetCharName(), LOBYTE(pContext->wRegionID),
+                              HIBYTE(pContext->wRegionID), (double)pContext->fX,
+                              (double)pContext->fY, (double)pContext->fZ);
     }
     if (hr != S_OK)
     {
