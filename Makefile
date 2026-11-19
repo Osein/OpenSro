@@ -500,6 +500,18 @@ shard_world: $(OBJ)\ShardManager $(SHARD_WORLD_OBJS)
 {JMX_CommonServers\GlobalManager}.cpp{$(OBJ)\GlobalManager}.obj:
 	cl $(CFLAGS) $(GLOBAL_DEFS) /Fo$@ /Fd$(OBJ)\GlobalManager\ $<
 
+# SR_ShardManager schedules (CShard_ScheduleManager, the schedule jobs, the temple gates);
+# "nmake shard_sched" compiles them.
+SHARD_SCHED_OBJS = $(OBJ)\ShardManager\ShardSchedule.obj
+
+$(OBJ)\ShardManager:
+	@if not exist $@ mkdir $@
+
+{SilkroadOnline\Server\ShardManager}.cpp{$(OBJ)\ShardManager}.obj:
+	cl $(CFLAGS) $(SHARD_DEFS) $(SHARD_APP_INC) /Fo$@ /Fd$(OBJ)\ShardManager\ $<
+
+shard_sched: $(OBJ)\ShardManager $(SHARD_SCHED_OBJS)
+
 {JMX_CommonServers\GlobalManager\Billing}.cpp{$(OBJ)\GlobalManager}.obj:
 	cl $(CFLAGS) $(GLOBAL_DEFS) /Fo$@ /Fd$(OBJ)\GlobalManager\ $<
 
