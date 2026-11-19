@@ -377,6 +377,10 @@ SHARD_WORLD1_OBJS = $(OBJ)\ShardManager\AssociationReputation.obj \
 	$(OBJ)\ShardManager\MainProcessWorld1.obj \
 	$(OBJ)\ShardManager\ClientManagerWorld1.obj
 
+# SR_ShardManager admin queries: the AQ jobs of the service manager console, the shard
+# maintainer and the one-by-one processor. "nmake shard_admin" compiles them.
+SHARD_ADMIN_OBJS = $(OBJ)\ShardManager\AQBase.obj
+
 TESTS = $(TESTS) $(BIN)\ShardClimateTest.exe
 
 $(OBJ)\test\ShardClimateTest.obj: test\ShardClimateTest.cpp
@@ -523,6 +527,8 @@ shard_sched: $(OBJ)\ShardManager $(SHARD_SCHED_OBJS) $(OBJ)\ShardManager\ShardSc
 shard_server_event: $(OBJ)\ShardManager $(SHARD_SERVER_EVENT_OBJS)
 
 shard_world1: $(OBJ)\ShardManager $(SHARD_WORLD1_OBJS)
+
+shard_admin: $(OBJ)\ShardManager $(SHARD_ADMIN_OBJS)
 
 {JMX_CommonServers\GlobalManager}.cpp{$(OBJ)\GlobalManager}.obj:
 	cl $(CFLAGS) $(GLOBAL_DEFS) /Fo$@ /Fd$(OBJ)\GlobalManager\ $<
