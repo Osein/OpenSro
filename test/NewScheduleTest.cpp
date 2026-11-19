@@ -303,12 +303,12 @@ public:
     {
         SetDefineName(pszDefine);
     }
-    virtual void CreateInstance() {}
+    virtual IScheduleJob* CreateInstance() { return NULL; }
     virtual void DeleteInstance() {}
     virtual BOOL CanBegin() { return TRUE; }
     virtual BOOL OnBegin() { ++m_nBegin; return TRUE; }
     virtual BOOL OnTick(CDateTime&) { ++m_nTick; return TRUE; }
-    virtual void OnEnd(CDateTime&) { ++m_nEnd; }
+    virtual BOOL OnEnd(CDateTime&) { ++m_nEnd; return TRUE; }
     int m_nBegin;
     int m_nTick;
     int m_nEnd;

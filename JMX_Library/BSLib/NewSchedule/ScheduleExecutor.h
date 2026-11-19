@@ -25,13 +25,14 @@ public:
 
     virtual void SetDefineName(std::string strDefine);                          // 0  0x664330
     virtual BOOL SetScheduleInfo(const sScheduleInfo& info);                    // 1  0x6c7510
-    virtual void CreateInstance() = 0;                                          // 2
+    // Makes the running copy of the prototype (also kept in m_pInstance).
+    virtual IScheduleJob* CreateInstance() = 0;                                 // 2
     virtual void DeleteInstance() = 0;                                          // 3
     // Asked by AddJob before the job starts (TRUE in every SR_ShardManager job).
     virtual BOOL CanBegin() = 0;                                                // 4
     virtual BOOL OnBegin() = 0;                                                 // 5
     virtual BOOL OnTick(CDateTime& now) = 0;                                    // 6
-    virtual void OnEnd(CDateTime& now) = 0;                                     // 7
+    virtual BOOL OnEnd(CDateTime& now) = 0;                                     // 7
 
 public:
     sScheduleInfo   m_Info;         // +04
