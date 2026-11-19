@@ -26,6 +26,7 @@ const char* const CShardSJ_TempleOfSelkisAndNeithGate::s_pszOpenLog =
     "Scheduleing : Selkis And Neith Of Temple is now Open ...";
 const char* const CShardSJ_TempleOfAnubisAndIsisGate::s_pszNoticeLog =
     "Scheduleing : Anubis And Isis Of Temple is Open Before %d Min...";
+// BUG(SM-134): names the Neith temple.
 const char* const CShardSJ_TempleOfAnubisAndIsisGate::s_pszOpenLog =
     "Scheduleing : Anubis And Neith Of Temple is now Opened ...";
 const char* const CShardSJ_TempleOfHaroerisGate::s_pszNoticeLog =
