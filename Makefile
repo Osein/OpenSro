@@ -356,6 +356,27 @@ SHARD_WORLD_OBJS = $(OBJ)\ShardManager\Climate.obj \
 	$(OBJ)\ShardManager\FlagWorld.obj \
 	$(OBJ)\ShardManager\SiegeFortress.obj \
 	$(OBJ)\ShardManager\BattleArena.obj
+
+# SR_ShardManager schedules (CShard_ScheduleManager and the temple gates; the jobs are in
+# SHARD_WORLD_OBJS). "nmake shard_sched" compiles them with the jobs.
+SHARD_SCHED_OBJS = $(OBJ)\ShardManager\ShardSchedule.obj \
+	$(OBJ)\ShardManager\ShardTempleGate.obj
+
+# SR_ShardManager server events (CServerEvent, CServerEventReward, the delayed jobs and
+# CServerEventMgr). "nmake shard_server_event" compiles them.
+SHARD_SERVER_EVENT_OBJS = $(OBJ)\ShardManager\ServerEvent.obj \
+	$(OBJ)\ShardManager\ServerEventMgr.obj
+
+# SR_ShardManager association reputation, the log jobs of the server events and schedules, the
+# guild siege authority and the world parts of the main process, client manager and user.
+# "nmake shard_world1" compiles them.
+SHARD_WORLD1_OBJS = $(OBJ)\ShardManager\AssociationReputation.obj \
+	$(OBJ)\ShardManager\ShardLogJobs.obj \
+	$(OBJ)\ShardManager\SiegeDataUpdaterWorld1.obj \
+	$(OBJ)\ShardManager\GuildSiegeAuthority.obj \
+	$(OBJ)\ShardManager\MainProcessWorld1.obj \
+	$(OBJ)\ShardManager\ClientManagerWorld1.obj
+
 TESTS = $(TESTS) $(BIN)\ShardClimateTest.exe
 
 $(OBJ)\test\ShardClimateTest.obj: test\ShardClimateTest.cpp
@@ -497,34 +518,14 @@ shard_social: $(OBJ)\ShardManager $(OBJ)\ServerCommon $(SHARD_SOCIAL_OBJS)
 
 shard_world: $(OBJ)\ShardManager $(SHARD_WORLD_OBJS)
 
-{JMX_CommonServers\GlobalManager}.cpp{$(OBJ)\GlobalManager}.obj:
-	cl $(CFLAGS) $(GLOBAL_DEFS) /Fo$@ /Fd$(OBJ)\GlobalManager\ $<
-
-# SR_ShardManager schedules (CShard_ScheduleManager and the temple gates; the jobs are in
-# SHARD_WORLD_OBJS). "nmake shard_sched" compiles them with the jobs.
-SHARD_SCHED_OBJS = $(OBJ)\ShardManager\ShardSchedule.obj \
-	$(OBJ)\ShardManager\ShardTempleGate.obj
-
 shard_sched: $(OBJ)\ShardManager $(SHARD_SCHED_OBJS) $(OBJ)\ShardManager\ShardScheduleJob.obj
-
-# SR_ShardManager server events (CServerEvent, CServerEventReward, the delayed jobs and
-# CServerEventMgr). "nmake shard_server_event" compiles them.
-SHARD_SERVER_EVENT_OBJS = $(OBJ)\ShardManager\ServerEvent.obj \
-	$(OBJ)\ShardManager\ServerEventMgr.obj
 
 shard_server_event: $(OBJ)\ShardManager $(SHARD_SERVER_EVENT_OBJS)
 
-# SR_ShardManager association reputation, the log jobs of the server events and schedules, the
-# guild siege authority and the world parts of the main process, client manager and user.
-# "nmake shard_world1" compiles them.
-SHARD_WORLD1_OBJS = $(OBJ)\ShardManager\AssociationReputation.obj \
-	$(OBJ)\ShardManager\ShardLogJobs.obj \
-	$(OBJ)\ShardManager\SiegeDataUpdaterWorld1.obj \
-	$(OBJ)\ShardManager\GuildSiegeAuthority.obj \
-	$(OBJ)\ShardManager\MainProcessWorld1.obj \
-	$(OBJ)\ShardManager\ClientManagerWorld1.obj
-
 shard_world1: $(OBJ)\ShardManager $(SHARD_WORLD1_OBJS)
+
+{JMX_CommonServers\GlobalManager}.cpp{$(OBJ)\GlobalManager}.obj:
+	cl $(CFLAGS) $(GLOBAL_DEFS) /Fo$@ /Fd$(OBJ)\GlobalManager\ $<
 
 {JMX_CommonServers\GlobalManager\Billing}.cpp{$(OBJ)\GlobalManager}.obj:
 	cl $(CFLAGS) $(GLOBAL_DEFS) /Fo$@ /Fd$(OBJ)\GlobalManager\ $<
