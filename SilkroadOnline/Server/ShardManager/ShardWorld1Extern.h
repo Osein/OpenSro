@@ -83,3 +83,21 @@ std::set<DWORD>& MainProcess_GetSuspectedUsers(CMainProcess* pProcess);
 // body ID is the WORD at +0x121 of the record at +0x1C of the shard's own server data
 // (0x8588B4). The result of the relay.
 BOOL MainProcess_RelayToGlobalManager(CMsg* pMsg);
+// CMainProcess::SendToServerBody (0x412290).
+BOOL MainProcess_SendToServerBody(CMsg* pMsg, WORD wBodyID, DWORD dwJID);
+// CMainProcess_GetServerBodyField13: the session of the server body wBodyID, 0 without one.
+DWORD MainProcess_GetBodySession(WORD wBodyID);
+// MeterRateConfig_GetStatic (0x41b9b0): the two meter rate thresholds in hours
+// (HourForMeterRateLevel).
+const BYTE* MeterRateConfig_GetStatic();
+// DB_AddLogChar (0x412310)
+void DB_AddLogChar(int nCharID, int nJID, int nParam, BYTE byEventID, int nData);
+
+// ---------------------------------------------------------------------------------------------
+// Provided by SM_main3 / the party group (CUser, CGMLevelManager)
+
+class CUser;
+// CUser_SetPlayTimeFlagAndSend (CMainProcess::OnMsg_231F per user).
+void CUser_SetPlayTimeFlagAndSend(WORD wFlag, CUser* pUser);
+// CGMLevelManager_HasGMLevelForIP (0x61be20) on dword_8A894C (asserted when there is none).
+BOOL GMLevelManager_HasGMLevelForIP(BYTE byLevel);
