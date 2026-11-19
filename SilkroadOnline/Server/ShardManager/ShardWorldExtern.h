@@ -56,30 +56,28 @@ C_ASSERT(FIELD_OFFSET(GameWorldCharPos, awCreateTime) == 0x28);
 // GetSingleton_CGuildManager (0x40bab0).
 void GuildManager_ResetSiegeAuthority(DWORD dwGuildID);
 
-// Provided by SM_main: the siege schedule state of the main process (CMainProcess + 0x42310;
-// the same declaration as SM_world3's ShardScheduleExtern.h).
+// Provided by SM_main: the siege schedule state of the main process (CMainProcess + 0x42310),
+// used by the siege jobs and CSiegeFortressMgr::InitSiegeScheduleTimes.
 struct SHARD_SIEGE_SCHEDULE
 {
-    BYTE        ab00[0x25];
+    BYTE        ab00[0x24];
+    BYTE        bRequestPeriod;     // +24 inside the siege request period
     BYTE        bSiegeRunning;      // +25 between siege begin and end
     BYTE        bTaxPeriod;         // +26 inside the tax period
     BYTE        b27;
     SYSTEMTIME  stPrevSiegeBegin;   // +28
     SYSTEMTIME  stSiegeBegin;       // +38
     SYSTEMTIME  stSiegeEnd;         // +48
-    SYSTEMTIME  stTaxBegin;         // +58 the SCHEDULE_DEF_SIEGE_REQUEST_PERIOD period
-    SYSTEMTIME  stTaxEnd;           // +68
+    SYSTEMTIME  stPeriodBegin;      // +58 the request or tax period that began last (at start:
+                                    //     the next SCHEDULE_DEF_SIEGE_REQUEST_PERIOD period)
+    SYSTEMTIME  stPeriodEnd;        // +68
 };
 
+C_ASSERT(FIELD_OFFSET(SHARD_SIEGE_SCHEDULE, bSiegeRunning) == 0x25);
 C_ASSERT(FIELD_OFFSET(SHARD_SIEGE_SCHEDULE, stPrevSiegeBegin) == 0x28);
-C_ASSERT(FIELD_OFFSET(SHARD_SIEGE_SCHEDULE, stTaxEnd) == 0x68);
+C_ASSERT(FIELD_OFFSET(SHARD_SIEGE_SCHEDULE, stPeriodEnd) == 0x68);
 
 SHARD_SIEGE_SCHEDULE* MainProcess_GetSiegeSchedule();
-
-namespace NewSchedule { class CScheduleManager; }
-
-// Provided by SM_world3: the static CShard_ScheduleManager (0x8A7B24).
-NewSchedule::CScheduleManager* ShardScheduleManager_Get();
 
 // Provided by SM_main: CMainProcess + 0x423B0: one BYTE per battle arena match type (occupy, score,
 // flag), 0 while the match type is switched off.

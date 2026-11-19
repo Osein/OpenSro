@@ -18,66 +18,15 @@ class CMsg;
 //     DWORD group ID, DWORD schedule ID, DWORD begin, DWORD end, DWORD state (0 end, 1 begin,
 //     2 tick), string define, then the job's own fields.
 
-// IShard_ScheduleJob (vftable 0x795fac). The job classes register prototypes; the executor runs
-// a copy made by CreateInstance.
-class IShard_ScheduleJob : public NewSchedule::IScheduleJob
+enum
 {
-public:
-    // 0x6644d0. m_pMsg is not set.
-    IShard_ScheduleJob() { m_bWorkingStateWhenServiceStart = 1; }
-    // ~IShard_ScheduleJob 0x664730: the base members only.
-
-    // Slots 3, 4, 6 and 7 of every job class share one function each (0x664980, 0x6649b0 and
-    // 0x664720 for both slot 6 and 7); IShard_ScheduleJob's own entries are pure.
-    // BUG(SM-132): deletes the copy through IScheduleJob, whose destructor is not virtual.
-    virtual void DeleteInstance();                                              // 3  0x664980
-    virtual BOOL CanBegin() { return TRUE; }                                    // 4  0x6649b0
-    virtual BOOL OnTick(CDateTime& /*now*/) { return TRUE; }                    // 6  0x664720
-    virtual BOOL OnEnd(CDateTime& /*now*/) { return TRUE; }                     // 7  0x664720
-    // Called by the executor after SetScheduleInfo, before OnTick and before OnEnd with the
-    // two extra arguments of the event; empty in every job (0x664530).
-    virtual void OnBeginParam(DWORD /*dw1*/, DWORD /*dw2*/) {}                  // 8
-    virtual void OnTickParam(DWORD /*dw1*/, DWORD /*dw2*/) {}                   // 9
-    virtual void OnEndParam(DWORD /*dw1*/, DWORD /*dw2*/) {}                    // 10
-
-    // 0x666130: a new 0x34FE message in m_pMsg with the head of *pInfo (m_Info when NULL).
-    void BeginNotify(const NewSchedule::sScheduleInfo* pInfo);
-    // 0x6661c0: m_pMsg to every game server.
-    void BroadcastToGameServers();
-    // The _LogSchedule row of every OnBegin / OnEnd (inlined): "Start" for a begin event, this
-    // server's body ID (-1 without one), the define and the schedule ID.
-    void InsertScheduleLog();
-
-public:
-    CMsg*   m_pMsg;                         // +70
-    BYTE    m_bWorkingStateWhenServiceStart; // +74 read by GetWorkingStateWhenServiceStart
+    MSG_SHARD_SCHEDULE_NOTIFY = 0x34FE,
 };
 
-C_ASSERT(FIELD_OFFSET(IShard_ScheduleJob, m_pMsg) == 0x70);
-C_ASSERT(sizeof(IShard_ScheduleJob) == 0x78);
+// The head of 0x34FE: group, schedule, begin, end, state and define.
+void ShardSchedule_WriteHead(CMsg* pMsg, const NewSchedule::sScheduleInfo& info);
 
-// The job classes: slot 2 makes the running copy (operator new of the class, kept in
-// m_pInstance and returned). The constructors name the schedule define with
-// SHARD_SCHEDULE_JOB_CTOR.
-template <class TJob, class TBase>
-class CShardScheduleJobT : public TBase
-{
-public:
-    virtual NewSchedule::IScheduleJob* CreateInstance()                         // 2
-    {
-        TJob* pJob = new TJob;
-        this->m_pInstance = pJob;
-        return pJob;
-    }
-};
-
-// Constructor body of a job class: the define and the job's flag member.
-#define SHARD_SCHEDULE_JOB_CTOR(Class, pszDefine, Member, Value)                \
-    Class::Class()                                                              \
-    {                                                                           \
-        NewSchedule::IScheduleJob::SetDefineName(pszDefine);                    \
-        Member = Value;                                                         \
-    }
+// The job classes are in ShardScheduleJob.h, the temple gates in ShardTempleGate.h.
 
 // CShard_ScheduleExecutor (vftable 0x795fdc), the static object g_ShardScheduleExecutor
 // (0x8a7b48).

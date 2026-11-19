@@ -701,7 +701,7 @@ void CFlagWorldMgr::StartGame()
 
 BOOL CShard_FlagWorldParticipation::OnBegin()           // 0x66d230
 {
-    if (g_pShardScheduleExecutor->FindJobByName(m_Info.strDefine))
+    if (g_ShardScheduleExecutor.FindJobByName(m_Info.strDefine))
         return FALSE;
     BeginNotify(NULL);
     if (!g_pFlagWorldMgr)
@@ -724,7 +724,7 @@ void CShard_FlagWorldParticipation::OnEnd(CDateTime& /*now*/)  // 0x66d3c0
 
 BOOL CSahrd_FlagWorld::OnBegin()                        // 0x66d520
 {
-    if (g_pShardScheduleExecutor->FindJobByName(m_Info.strDefine))
+    if (g_ShardScheduleExecutor.FindJobByName(m_Info.strDefine))
         return FALSE;
     DWORD dwBegin = m_Info.dwBegin;
     m_dwBegin = dwBegin;
@@ -753,7 +753,7 @@ BOOL CSahrd_FlagWorld::OnTick(CDateTime& now)           // 0x66d6c0
         g_pFlagWorldMgr->Notify1MinBeforeGame(m_pNotifyMsg);
         BroadcastNotify();
         m_byStage = 1;
-        LogPrintf(g_nScheduleLogMode != 1 ? 0 : 0x2000001,
+        LogPrintf(ShardScheduleLogFlags(),
                   "Scheduleing : FlagWorld is Start Before 1 Min ......!");
     }
     if ((DWORD)now.GetTime() > m_dwGameStart && m_byStage == 1)
@@ -762,7 +762,7 @@ BOOL CSahrd_FlagWorld::OnTick(CDateTime& now)           // 0x66d6c0
             BSAssertFail();
         g_pFlagWorldMgr->RequestParticipantLevels();
         m_byStage = 2;
-        LogPrintf(g_nScheduleLogMode != 1 ? 0 : 0x2000001,
+        LogPrintf(ShardScheduleLogFlags(),
                   "Scheduleing : FlagWorld is Start ......!");
     }
     return TRUE;

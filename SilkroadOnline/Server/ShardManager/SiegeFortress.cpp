@@ -11,6 +11,7 @@
 #include "BSNet/Msg.h"
 #include "ServerFramework/MassiveMsg.h"
 #include "ServerFramework/ServerDataExtern.h"
+#include "ShardManager/ShardSchedule.h"
 #include "ShardManager/ShardWorldExtern.h"
 
 enum
@@ -38,7 +39,7 @@ void CSiegeFortressMgr::InitSiegeScheduleTimes()
     if (!g_pMainProcess)
         BSAssertFail();
     SHARD_SIEGE_SCHEDULE* pSiege = MainProcess_GetSiegeSchedule();
-    NewSchedule::CScheduleManager* pMgr = ShardScheduleManager_Get();
+    NewSchedule::CScheduleManager* pMgr = &g_ShardScheduleManager;
 
     // The period is cleared before each use and at the end instead of being destroyed
     // (BUG(FW11-023)).
@@ -65,8 +66,8 @@ void CSiegeFortressMgr::InitSiegeScheduleTimes()
     pMgr->GetNextPeriods(lstRequest, std::string("SCHEDULE_DEF_SIEGE_REQUEST_PERIOD"), 1, now);
     if (!lstRequest.empty())
         period = lstRequest.front();
-    CDateTime(period.tBegin).GetAsSystemTime(pSiege->stTaxBegin);
-    CDateTime(period.tEnd).GetAsSystemTime(pSiege->stTaxEnd);
+    CDateTime(period.tBegin).GetAsSystemTime(pSiege->stPeriodBegin);
+    CDateTime(period.tEnd).GetAsSystemTime(pSiege->stPeriodEnd);
 
     NewSchedule::ZeroScheduleStruct(period);
 }

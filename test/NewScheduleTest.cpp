@@ -308,7 +308,7 @@ public:
     virtual BOOL CanBegin() { return TRUE; }
     virtual BOOL OnBegin() { ++m_nBegin; return TRUE; }
     virtual BOOL OnTick(CDateTime&) { ++m_nTick; return TRUE; }
-    virtual BOOL OnEnd(CDateTime&) { ++m_nEnd; return TRUE; }
+    virtual void OnEnd(CDateTime&) { ++m_nEnd; }
     int m_nBegin;
     int m_nTick;
     int m_nEnd;

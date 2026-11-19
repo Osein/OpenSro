@@ -9,6 +9,8 @@
 #include "ServerFramework/ServerDataExtern.h"
 #include "ServerFramework/Trigger.h"
 #include "ShardManager/ShardScheduleExtern.h"
+#include "ShardManager/ShardWorldExtern.h"
+#include "ShardManager/SiegeFortress.h"
 
 using NewSchedule::sScheduleEvent;
 using NewSchedule::sScheduleInfo;
@@ -21,13 +23,8 @@ using NewSchedule::SCHEDULE_DEFINE_DATA;
 CShard_ScheduleManager g_ShardScheduleManager;
 CShard_ScheduleExecutor g_ShardScheduleExecutor;
 
-enum
-{
-    MSG_SHARD_SCHEDULE_NOTIFY = 0x34FE,
-};
-
 // The head of 0x34FE: group, schedule, begin, end, state and define.
-static void WriteScheduleHead(CMsg* pMsg, const sScheduleInfo& info)
+void ShardSchedule_WriteHead(CMsg* pMsg, const sScheduleInfo& info)
 {
     pMsg->WriteBytes(&info.dwGroupID, 4);
     pMsg->WriteBytes(&info.dwScheduleID, 4);
@@ -38,49 +35,12 @@ static void WriteScheduleHead(CMsg* pMsg, const sScheduleInfo& info)
 }
 
 // ---------------------------------------------------------------------------------------------
-// IShard_ScheduleJob
-
-void IShard_ScheduleJob::DeleteInstance()
-{
-    NewSchedule::IScheduleJob* pInstance = m_pInstance;
-    if (pInstance)
-    {
-        delete pInstance;
-        m_pInstance = NULL;
-    }
-}
-
-void IShard_ScheduleJob::BeginNotify(const sScheduleInfo* pInfo)
-{
-    if (!pInfo)
-        pInfo = &m_Info;
-    m_pMsg = g_pNetEngine->AllocMsg(FALSE);
-    m_pMsg->SetOpcode(MSG_SHARD_SCHEDULE_NOTIFY);
-    WriteScheduleHead(m_pMsg, *pInfo);
-}
-
-void IShard_ScheduleJob::BroadcastToGameServers()
-{
-    BS_ASSERT(g_pShardMainProcess);
-    MainProcess_BroadcastToAllGameServers(m_pMsg);
-}
-
-void IShard_ScheduleJob::InsertScheduleLog()
-{
-    const char* pszState = m_Info.bBegin == 1 ? "Start" : "End";
-    SERVER_BODY* pBody = Shard_GetServerBodyOfMyself();
-    int nServerID = pBody ? pBody->wID : -1;
-    Schedule_InsertLogAsync("SR_ShardManager", nServerID, m_Info.strDefine, m_Info.dwScheduleID,
-                            pszState);
-}
-
-// ---------------------------------------------------------------------------------------------
 // CShard_ScheduleManager
 
 void CShard_ScheduleManager::RebuildEventList()
 {
     BS_ASSERT(g_pSiegeFortressMgr);
-    SiegeFortressMgr_InitSiegeScheduleTimes(g_pSiegeFortressMgr);
+    CSiegeFortressMgr::InitSiegeScheduleTimes();
     NewSchedule::CScheduleManager::RebuildEventList();
 }
 
@@ -256,9 +216,9 @@ void CShard_ScheduleManager::BroadcastSchedule(const sScheduleInfo& info)
 {
     CMsg* pMsg = g_pNetEngine->AllocMsg(FALSE);
     pMsg->SetOpcode(MSG_SHARD_SCHEDULE_NOTIFY);
-    WriteScheduleHead(pMsg, info);
-    BS_ASSERT(g_pShardMainProcess);
-    MainProcess_BroadcastToAllGameServers(pMsg);
+    ShardSchedule_WriteHead(pMsg, info);
+    BS_ASSERT(g_pMainProcess);
+    CMainProcess::BroadcastToAllGameServers(pMsg);
 }
 
 // ---------------------------------------------------------------------------------------------

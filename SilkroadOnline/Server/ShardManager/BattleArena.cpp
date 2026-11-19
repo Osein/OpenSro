@@ -767,7 +767,7 @@ static CBattleArenaMgr* GetBattleArenaMgr()
 
 BOOL CShard_BattleArenaScheduleParticipation::OnBegin() // 0x677e50
 {
-    if (g_pShardScheduleExecutor->FindJobByName(m_Info.strDefine))
+    if (g_ShardScheduleExecutor.FindJobByName(m_Info.strDefine))
         return FALSE;
     m_dwRunning = 1;
     m_dwNoticeTick = GetTickCount();
@@ -808,7 +808,7 @@ void CShard_BattleArenaScheduleParticipation::OnEnd(CDateTime& /*now*/)   // 0x6
 
 BOOL CShard_BattleArenaSchedule::OnBegin()              // 0x6782c0
 {
-    if (g_pShardScheduleExecutor->FindJobByName(m_Info.strDefine))
+    if (g_ShardScheduleExecutor.FindJobByName(m_Info.strDefine))
         return FALSE;
     DWORD dwBegin = m_Info.dwBegin;
     m_dwBegin = dwBegin;
@@ -835,7 +835,7 @@ BOOL CShard_BattleArenaSchedule::OnTick(CDateTime& now) // 0x678480
         CBattleArenaMgr::Write1MinRemain(m_pNotifyMsg, m_byKind);
         BroadcastNotify();
         m_byStage = 1;
-        LogPrintf(g_nScheduleLogMode != 1 ? 0 : 0x2000001,
+        LogPrintf(ShardScheduleLogFlags(),
                   "Scheduleing : BattleArena(%d) is Start Before 1 Min......!", m_byKind);
     }
     DWORD dwNow = (DWORD)now.GetTime();
@@ -849,7 +849,7 @@ BOOL CShard_BattleArenaSchedule::OnTick(CDateTime& now) // 0x678480
         GetBattleArenaMgr()->SetParticipationTime(1000 * (info.dwEnd - m_dwGameStart));
         GetBattleArenaMgr()->CheckAndGo(m_byKind);
         m_byStage = 2;
-        LogPrintf(g_nScheduleLogMode != 1 ? 0 : 0x2000001,
+        LogPrintf(ShardScheduleLogFlags(),
                   "Scheduleing : BattleArena(%d) is Start ......!", m_byKind);
     }
     // The check tick is not renewed: once the interval has passed, every tick checks.
@@ -896,7 +896,7 @@ DWORD CShard_BattleArenaSchedule::GetRemainSeconds(CDateTime now)
 
 BOOL CShard_BattleArenaMatchSchedule::OnBegin()         // 0x6788c0
 {
-    if (g_pShardScheduleExecutor->FindJobByName(m_Info.strDefine))
+    if (g_ShardScheduleExecutor.FindJobByName(m_Info.strDefine))
         return FALSE;
     GetBattleArenaMgr()->SetMatchActive(m_byMatchType, 1);
     LogSchedule(NULL);

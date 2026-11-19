@@ -32,7 +32,7 @@ public:
     virtual BOOL CanBegin() = 0;                                                // 4
     virtual BOOL OnBegin() = 0;                                                 // 5
     virtual BOOL OnTick(CDateTime& now) = 0;                                    // 6
-    virtual BOOL OnEnd(CDateTime& now) = 0;                                     // 7
+    virtual void OnEnd(CDateTime& now) = 0;                                     // 7
 
 public:
     sScheduleInfo   m_Info;         // +04
