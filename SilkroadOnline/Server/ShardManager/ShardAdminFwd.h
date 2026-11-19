@@ -62,3 +62,14 @@ void ShardIntegrate_OnQueryResult(AQ_CharDataEditor2* pJob, BOOL bSucceeded);
 // queries are relayed to).
 WORD Cert_GetOwnShardID();
 WORD Cert_GetGlobalManagerBodyID();
+
+// Provided by the shard DB group (CDBObjectList_DetachAndClear, 0x40a7e0): every record of
+// *pList goes back to pTable (CDBTable::FreeRecord), then the list is cleared.
+void DB_FreeRecordList(CDBRecordList* pList, CDBTable* pTable);
+
+// Provided by the client manager group (CClientManager 0x85884C, FindUserByCharName 0x4043f0):
+// the user playing the character, NULL when it is not in game.
+void* ClientMgr_FindUserByCharName(const std::string& strCharName);
+// Provided by the main process group (CharName_IsValid 0x40f200 on the main process): the
+// character name check of the shard (characters and length).
+BOOL MainProcess_IsValidCharName(const std::string& strCharName);
