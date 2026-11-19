@@ -520,7 +520,8 @@ shard_server_event: $(OBJ)\ShardManager $(SHARD_SERVER_EVENT_OBJS)
 SHARD_WORLD1_OBJS = $(OBJ)\ShardManager\AssociationReputation.obj \
 	$(OBJ)\ShardManager\ShardLogJobs.obj \
 	$(OBJ)\ShardManager\SiegeDataUpdaterWorld1.obj \
-	$(OBJ)\ShardManager\GuildSiegeAuthority.obj
+	$(OBJ)\ShardManager\GuildSiegeAuthority.obj \
+	$(OBJ)\ShardManager\MainProcessWorld1.obj
 
 shard_world1: $(OBJ)\ShardManager $(SHARD_WORLD1_OBJS)
 

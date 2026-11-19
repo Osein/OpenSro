@@ -20,6 +20,7 @@
 
 class CDBTable;
 class CMainProcess;
+class CMsg;
 
 // The shard DB table of nIndex as the callers read it (the inlined vector access with its
 // checks): asserts and gives NULL when the table vector does not reach the index.
@@ -78,3 +79,7 @@ BOOL DB_Insert_LogSchedule(ServerFramework::COverlapJob* pJob, std::string strMo
 BYTE MainProcess_IsTeenage();
 // CMainProcess + 0x423D8: the JIDs registered as suspected users (std::set<DWORD>).
 std::set<DWORD>& MainProcess_GetSuspectedUsers(CMainProcess* pProcess);
+// ServerFramework::RelayMsgToBody_6008(g_pMainProcess, pMsg, global manager body, 0, 0, 0): the
+// body ID is the WORD at +0x121 of the record at +0x1C of the shard's own server data
+// (0x8588B4). The result of the relay.
+BOOL MainProcess_RelayToGlobalManager(CMsg* pMsg);
