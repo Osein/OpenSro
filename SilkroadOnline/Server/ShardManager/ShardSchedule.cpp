@@ -9,6 +9,8 @@
 #include "ServerFramework/ServerDataExtern.h"
 #include "ServerFramework/Trigger.h"
 #include "ShardManager/ShardScheduleExtern.h"
+#include "ShardManager/ShardScheduleJob.h"
+#include "ShardManager/ShardTempleGate.h"
 #include "ShardManager/ShardWorldExtern.h"
 #include "ShardManager/SiegeFortress.h"
 
@@ -220,6 +222,170 @@ void CShard_ScheduleManager::BroadcastSchedule(const sScheduleInfo& info)
     ShardSchedule_WriteHead(pMsg, info);
     BS_ASSERT(g_pMainProcess);
     CMainProcess::BroadcastToAllGameServers(pMsg);
+}
+
+// ---------------------------------------------------------------------------------------------
+// CShard_ScheduleExecutor
+
+// One prototype of RegisterDefaultJobs: a NULL job (failed allocation) fails the registration
+// as well.
+static void RegisterDefaultJob(NewSchedule::IScheduleJob* pJob, const char* pszClass)
+{
+    if (!g_ShardScheduleExecutor.RegisterJob(pJob))
+        LogPrintf(0x2000001, "ScheduleExecutor : %s Default ScheduleJob Register Failed !!!",
+                  pszClass);
+}
+
+BOOL CShard_ScheduleExecutor::RegisterDefaultJobs()
+{
+    RegisterDefaultJob(new CShardSJ_MentorHonor, "CShardSJ_MentorHonor");
+    RegisterDefaultJob(new CShardSJ_SiegeRequestPeriod, "CShardSJ_SiegeRequestPeriod");
+    RegisterDefaultJob(new CShardSJ_SiegePeriod, "CShardSJ_SiegePeriod");
+    RegisterDefaultJob(new CShardSJ_SiegeFortressStatusUpdate,
+                       "CShardSJ_SiegeFortressStatusUpdate");
+    RegisterDefaultJob(new CShardSJ_SiegeTaxPeriod, "CShardSJ_SiegeTaxPeriod");
+    RegisterDefaultJob(new CShardSJ_Roc, "CShardSJ_Roc");
+    RegisterDefaultJob(new CShardSJ_ChinsTomb, "CShardSJ_ChinsTomb");
+    RegisterDefaultJob(new CShardSJ_TempleOfSelkisAndNeithGate,
+                       "CShardSJ_TempleOfSelkisAndNeithGate");
+    RegisterDefaultJob(new CShardSJ_TempleOfAnubisAndIsisGate,
+                       "CShardSJ_TempleOfAnubisAndIsisGate");
+    RegisterDefaultJob(new CShardSJ_TempleOfHaroerisGate, "CShardSJ_TempleOfHaroerisGate");
+    RegisterDefaultJob(new CShard_FlagWorldParticipation, "CShard_FlagWorldParticipation");
+    RegisterDefaultJob(new CSahrd_FlagWorld, "CSahrd_FlagWorld");
+    RegisterDefaultJob(new CShard_BattleArenaRandomParticipation,
+                       "CShard_BattleArenaRandomParticipation");
+    RegisterDefaultJob(new CShard_BattleArenaRandom, "CShard_BattleArenaRandom");
+    RegisterDefaultJob(new CShard_BattleArenaPartyParticipation,
+                       "CShard_BattleArenaPartyParticipation");
+    RegisterDefaultJob(new CShard_BattleArenaParty, "CShard_BattleArenaParty");
+    RegisterDefaultJob(new CShard_BattleArenaGuildParticipation,
+                       "CShard_BattleArenaGuildParticipation");
+    RegisterDefaultJob(new CShard_BattleArenaGuild, "CShard_BattleArenaGuild");
+    RegisterDefaultJob(new CShard_BattleArenaJobParticipation,
+                       "CShard_BattleArenaJobParticipation");
+    RegisterDefaultJob(new CShard_BattleArenaJob, "CShard_BattleArenaJob");
+    RegisterDefaultJob(new CShard_BattleArenaMatchPoint, "CShard_BattleArenaMatchPoint");
+    RegisterDefaultJob(new CShard_BattleArenaMatchFlag, "CShard_BattleArenaMatchFlag");
+    RegisterDefaultJob(new CShardSJ_EUBusinessEventUpdate, "CShardSJ_EUBusinessEventUpdate");
+    RegisterDefaultJob(new CShardSJ_UniqueSpawn, "CShardSJ_UniqueSpawn");
+    return TRUE;
+}
+
+int CShard_ScheduleExecutor::GetWorkingStateWhenServiceStart(std::string strDefine)
+{
+    NewSchedule::IScheduleJob* pJob = g_ShardScheduleExecutor.FindRegisteredJob(strDefine);
+    if (!pJob)
+    {
+        LogPrintf(0x2000001,
+                  "ScheduleExecutor : Don't Exist ScheduleJob - %s in "
+                  "GetWorkingStateWhenServiceStart()",
+                  strDefine.c_str());
+        return -1;
+    }
+    return static_cast<IShard_ScheduleJob*>(pJob)->m_bWorkingStateWhenServiceStart;
+}
+
+void CShard_ScheduleExecutor::Dispatch(sScheduleInfo& info)
+{
+    switch (info.bBegin)
+    {
+    case 0:
+        EndScheduleJob(info, 0, 0);
+        break;
+    case 1:
+        BeginScheduleJob(info, 0, 0);
+        break;
+    default:
+        BSAssertFail();
+        break;
+    }
+}
+
+BOOL CShard_ScheduleExecutor::OnScheduleMsg(CMsg* pMsg, DWORD /*dwParam*/)
+{
+    sScheduleInfo info;
+    NewSchedule::ZeroScheduleStruct(info);
+    if (pMsg)
+    {
+        *pMsg >> info.dwGroupID;
+        *pMsg >> info.dwScheduleID;
+        *pMsg >> info.dwBegin;
+        *pMsg >> info.dwEnd;
+        *pMsg >> info.bBegin;
+        *pMsg >> info.strDefine;
+    }
+    switch (info.bBegin)
+    {
+    case 0:
+        return EndScheduleJob(info, 0, 0);
+    case 1:
+        return BeginScheduleJob(info, 0, 0);
+    case 2:
+        return TickScheduleJob(info, 0, 0);
+    default:
+        BSAssertFail();
+        return TRUE;
+    }
+}
+
+BOOL CShard_ScheduleExecutor::BeginScheduleJob(sScheduleInfo& info, DWORD dw1, DWORD dw2)
+{
+    NewSchedule::IScheduleJob* pPrototype = FindRegisteredJob(info.strDefine);
+    if (!pPrototype)
+    {
+        LogPrintf(0x2000001, "ScheduleExecutor : Don't Exist ScheduleJob - %s",
+                  info.strDefine.c_str());
+        return FALSE;
+    }
+    IShard_ScheduleJob* pJob = static_cast<IShard_ScheduleJob*>(pPrototype->CreateInstance());
+    if (!pJob)
+    {
+        LogPrintf(0x2000001, "ScheduleExecutor : Instance Schedule Job Allocation Failed - %s",
+                  info.strDefine.c_str());
+        return FALSE;
+    }
+    pJob->SetScheduleInfo(info);
+    pJob->OnBeginParam(dw1, dw2);
+    if (AddJob(pJob, info) != 1)
+        LogPrintf(0x2000001, "ScheduleExecutor : Instance Schedule Job Insert Failed - %s",
+                  info.strDefine.c_str());
+    return TRUE;
+}
+
+BOOL CShard_ScheduleExecutor::EndScheduleJob(sScheduleInfo& info, DWORD dw1, DWORD dw2)
+{
+    IShard_ScheduleJob* pJob = static_cast<IShard_ScheduleJob*>(FindJob(info.dwScheduleID));
+    if (!pJob)
+    {
+        LogPrintf(0x2000001,
+                  "ScheduleExecutor : Find Failed In Schedule Exe - End(STATE) %s(DEFINE) "
+                  "%d(SCHIDX)",
+                  info.strDefine.c_str(), info.dwScheduleID);
+        return FALSE;
+    }
+    pJob->OnEndParam(dw1, dw2);
+    EndJob(info.dwScheduleID, info);
+    // BUG(SM-145): the running copy deletes its own m_pInstance, which is NULL (the prototype
+    // holds the copy), so the copy is never freed.
+    pJob->DeleteInstance();
+    return TRUE;
+}
+
+BOOL CShard_ScheduleExecutor::TickScheduleJob(sScheduleInfo& info, DWORD dw1, DWORD dw2)
+{
+    IShard_ScheduleJob* pJob = static_cast<IShard_ScheduleJob*>(FindJob(info.dwScheduleID));
+    if (!pJob)
+    {
+        // The end text in the tick as well.
+        LogPrintf(0x2000001,
+                  "ScheduleExecutor : Find Failed In Schedule Exe - End(STATE) %s(DEFINE) "
+                  "%d(SCHIDX)",
+                  info.strDefine.c_str(), info.dwScheduleID);
+        return FALSE;
+    }
+    pJob->OnTickParam(dw1, dw2);
+    return TRUE;
 }
 
 // ---------------------------------------------------------------------------------------------

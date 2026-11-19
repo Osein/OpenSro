@@ -36,14 +36,30 @@ public:
     // 0x6645c0 (dynamic initializer): the verbose flag is cleared.
     CShard_ScheduleExecutor() { m_bVerboseLog = FALSE; }
 
-    // Provided by SM_world4 (0x6673e0 .. 0x667720).
-    virtual void Dispatch(NewSchedule::sScheduleInfo& info);                    // 0
-    virtual void OnScheduleMsg(CMsg* pMsg, DWORD dwParam);                      // 1
-    virtual void BeginScheduleJob(NewSchedule::sScheduleInfo& info, DWORD dw1, DWORD dw2); // 2
-    virtual void EndScheduleJob(NewSchedule::sScheduleInfo& info, DWORD dw1, DWORD dw2);   // 3
-    virtual void TickScheduleJob(NewSchedule::sScheduleInfo& info, DWORD dw1, DWORD dw2);  // 4
+    // The begin (bBegin 1) or end (0) of a schedule event; asserts on another state. The
+    // original returns the result of the slot it calls (the base declares no result).
+    virtual void Dispatch(NewSchedule::sScheduleInfo& info);                    // 0  0x6673e0
+    // A schedule message (0x34FE head: group, schedule, begin, end, state, define) into a
+    // cleared info, then begin (state 1), end (0) or tick (2); asserts and gives TRUE on another
+    // state. dwParam is not used.
+    virtual BOOL OnScheduleMsg(CMsg* pMsg, DWORD dwParam);                      // 1  0x667420
+    // The running copy of the registered job: CreateInstance, SetScheduleInfo, slot 8, AddJob
+    // (a failed insert is logged, the copy stays). FALSE without a prototype or copy.
+    virtual BOOL BeginScheduleJob(NewSchedule::sScheduleInfo& info, DWORD dw1,
+                                  DWORD dw2);                                   // 2  0x6675c0
+    // Slot 10 of the running job, CScheduleExecutor::EndJob (OnEnd), then DeleteInstance on
+    // the running copy (BUG(SM-145)). FALSE when the job does not run.
+    virtual BOOL EndScheduleJob(NewSchedule::sScheduleInfo& info, DWORD dw1,
+                                DWORD dw2);                                     // 3  0x667690
+    // Slot 9 of the running job (not OnTick). FALSE when the job does not run.
+    virtual BOOL TickScheduleJob(NewSchedule::sScheduleInfo& info, DWORD dw1,
+                                 DWORD dw2);                                    // 4  0x667720
+
     // 0x667310: m_bWorkingStateWhenServiceStart of the registered job, -1 without one.
     static int GetWorkingStateWhenServiceStart(std::string strDefine);
+    // 0x666be0: one prototype of every job class into the job list (CreateJobList must have
+    // run); a failed registration is logged. Always TRUE.
+    static BOOL RegisterDefaultJobs();
 
 public:
     BOOL    m_bVerboseLog;  // +14 1: the schedule logs go out with 0x2000001, else 0
