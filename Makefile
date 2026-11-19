@@ -380,7 +380,8 @@ SHARD_WORLD1_OBJS = $(OBJ)\ShardManager\AssociationReputation.obj \
 # SR_ShardManager admin queries: the AQ jobs of the service manager console, the shard
 # maintainer and the one-by-one processor. "nmake shard_admin" compiles them.
 SHARD_ADMIN_OBJS = $(OBJ)\ShardManager\AQBase.obj \
-	$(OBJ)\ShardManager\AdminQueryJobs.obj
+	$(OBJ)\ShardManager\AdminQueryJobs.obj \
+	$(OBJ)\ShardManager\ShardMaintainer.obj
 
 TESTS = $(TESTS) $(BIN)\ShardClimateTest.exe
 
