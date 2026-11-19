@@ -51,3 +51,8 @@ ShardServerStateList* Cert_GetServerStateList();
 // The row of this server (pExceptionObject in the analysis).
 SHARD_SERVER_STATE* Cert_GetOwnServerState();
 DWORD Cert_FindModuleIDByName(const char* pszModule);
+
+// Provided by the shard integration part of the main process (ShardIntegrate_OnQueryResult,
+// 0xB450 answer): result of a rename job (bSucceeded 1 from OnComplete, 0 from OnFail).
+class AQ_CharDataEditor2;
+void ShardIntegrate_OnQueryResult(AQ_CharDataEditor2* pJob, BOOL bSucceeded);
