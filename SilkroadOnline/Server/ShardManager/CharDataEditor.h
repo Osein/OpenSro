@@ -73,20 +73,21 @@ public:
     int OnQueryRow(DWORD dwQuery, DWORD dwUnused);
 
 public:
-    BYTE                m_byItemOp;     // +64  2: the statement creates an item
-    DWORD               m_dwCharID;     // +68
+    BYTE                m_byItemOp;     // +64  item / timed job operation (1 delete, 2 add,
+                                        //      3 edit, 4 gold); 2: the statement creates an item
+    DWORD               m_dwRefItemID;  // +68  item of an item edit (_ADDLOGITEM)
     DWORD               m_dw6C;         // +6C
     unsigned __int64    m_qwItemID;     // +70
     unsigned __int64    m_qwSerial;     // +78
     BYTE                m_bySlot;       // +80
     DWORD               m_dw84;         // +84
     DWORD               m_dwJID;        // +88
-    DWORD               m_dw8C;         // +8C
-    std::string         m_strOldName;   // +90
+    DWORD               m_dw8C;         // +8C  second DWORD of a rename request (unused)
+    std::string         m_strOldName;   // +90  character rename
     std::string         m_strNewName;   // +AC
     std::string         m_strC8;        // +C8
     std::string         m_strLogQuery;  // +E4  _ADDLOGCHAR / _ADDLOGITEM statement
-    std::string         m_strEditDesc;  // +100 description for the log
+    std::string         m_strEditDesc;  // +100 arguments of the edit for the SMC log
     DWORD               m_dw11C;        // +11C
 };
 

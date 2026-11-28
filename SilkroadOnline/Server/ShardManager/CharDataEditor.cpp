@@ -8,6 +8,7 @@
 #include "ServerFramework/Trigger.h"
 #include "ServerFramework/ServerProcess.h"
 #include "ShardManager/AQBase.h"
+#include "ShardManager/AdminQueryJobs.h"
 #include "ShardManager/ShardAdminFwd.h"
 
 using ServerFramework::CMassiveMsg;
@@ -17,17 +18,22 @@ namespace
 
 // The statement formatting of the editors: a failed StringCchPrintfA asserts and throws an int
 // that the request reader catches as an invalid message.
+void CheckFormatted(HRESULT hr)
+{
+    if (hr != S_OK)
+    {
+        BSAssertFail();
+        throw 0;
+    }
+}
+
 void FormatOrThrow(char* psz, size_t cch, const char* pszFormat, ...)
 {
     va_list args;
     va_start(args, pszFormat);
     HRESULT hr = StringCchVPrintfA(psz, cch, pszFormat, args);
     va_end(args);
-    if (hr != S_OK)
-    {
-        BSAssertFail();
-        throw 0;
-    }
+    CheckFormatted(hr);
 }
 
 // How CCharDataSelector reads the argument of a query type.
@@ -375,20 +381,592 @@ void CCharDataEditor::Reset()
     m_strEditDesc.clear();
     m_qwItemID = 0;
     m_qwSerial = 0;
-    m_dwCharID = 0;
+    m_dwRefItemID = 0;
     m_dw84 = 0;
     m_bySlot = 0xFF;
 }
 
+namespace
+{
+
+// The three texts of an edit request: the statement, the console description and the
+// arguments of the edit for the SMC log (m_strEditDesc, the description of BuildSMCLog).
+// A format failure throws (invalid message).
+struct CDE_TEXT
+{
+    char szQuery[0xC00];    // BUG(SM-340): not initialised
+    char szDesc[0x100];     // "No Log. Some Error was Occurred", formatted with 0xFF characters
+    char szLog[0x80];       // empty
+
+    void Query(const char* pszFormat, ...)
+    {
+        va_list args;
+        va_start(args, pszFormat);
+        HRESULT hr = StringCchVPrintfA(szQuery, 0xC00, pszFormat, args);
+        va_end(args);
+        CheckFormatted(hr);
+    }
+    void Desc(const char* pszFormat, ...)
+    {
+        va_list args;
+        va_start(args, pszFormat);
+        HRESULT hr = StringCchVPrintfA(szDesc, 0xFF, pszFormat, args);
+        va_end(args);
+        CheckFormatted(hr);
+    }
+    void Log(const char* pszFormat, ...)
+    {
+        va_list args;
+        va_start(args, pszFormat);
+        HRESULT hr = StringCchVPrintfA(szLog, 0x80, pszFormat, args);
+        va_end(args);
+        CheckFormatted(hr);
+    }
+};
+
+// The item row of an item edit (0x143 bytes, CMsg_ReadStruct323_Either 0x48c460), the layout of
+// the _GetInventoryItem rows of the data selector.
+#pragma pack(push, 1)
+struct CDE_ITEM
+{
+    char                szOwner[0x80];      // +00  character or guild name
+    BYTE                bySlot;             // +80
+    unsigned __int64    qwItemID;           // +81
+    DWORD               dwRefItemID;        // +89
+    BYTE                byOptLevel;         // +8D
+    unsigned __int64    qwVariance;         // +8E
+    DWORD               dwData;             // +96
+    char                szCreaterName[0x40];// +9A
+    BYTE                byMagParamNum;      // +DA
+    unsigned __int64    aqwMagParam[12];    // +DB
+    unsigned __int64    qwSerial;           // +13B
+};
+#pragma pack(pop)
+C_ASSERT(sizeof(CDE_ITEM) == 0x143);
+
+// _SMC_EDIT_ITEM (bEdit: owner, slot, item ID, RefItemID, ...) or _SMC_ADD_ITEM (owner,
+// RefItemID, ...) arguments of an item row.
+void FormatItemQuery(CDE_TEXT& text, const char* pszFormat, const CDE_ITEM& item, bool bEdit)
+{
+    const unsigned __int64* p = item.aqwMagParam;
+    if (bEdit)
+    {
+        text.Query(pszFormat, item.szOwner, item.bySlot, item.qwItemID, item.dwRefItemID,
+                   item.byOptLevel, item.qwVariance, item.dwData, item.szCreaterName,
+                   item.byMagParamNum, p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8],
+                   p[9], p[10], p[11]);
+    }
+    else
+    {
+        text.Query(pszFormat, item.szOwner, item.dwRefItemID, item.byOptLevel,
+                   item.qwVariance, item.dwData, item.szCreaterName, item.byMagParamNum, p[0],
+                   p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9], p[10], p[11]);
+    }
+}
+
+bool IsValidName(const std::string& strName)
+{
+    return MainProcess_IsValidCharName(strName) != FALSE;
+}
+
+// Reads the character name and checks it (name rule, the character must be offline).
+bool ReadOfflineChar(CCharDataEditor* pEditor, CMsg* pMsg, std::string& strName)
+{
+    *pMsg >> strName;
+    return IsValidName(strName) && CharDataEditor_CheckNotInGame(pEditor, strName);
+}
+
+// Every reader returns false without a result code when a check fails; the checks that answer
+// one (result 14 in game, 15 game servers running) set it themselves.
+typedef bool (*CDE_READER)(CCharDataEditor* pEditor, CMsg* pMsg, CDE_TEXT& text);
+
+// 0: position {name, WORD region, float x, y, z, WORD angle}, read after the checks.
+bool ReadCharPosition(CCharDataEditor* pEditor, CMsg* pMsg, CDE_TEXT& text)
+{
+    std::string strName;
+    *pMsg >> strName;
+    if (!IsValidName(strName) || !CharDataEditor_CheckNotInGame(pEditor, strName))
+        return false;
+    WORD wRegion, wAngle;
+    float fX, fY, fZ;
+    *pMsg >> wRegion >> fX >> fY >> fZ >> wAngle;
+    // The statement gets the region signed, the texts unsigned.
+    text.Query("exec _ModifyCharPos '%s', %d, %f, %f, %f, %d", strName.c_str(),
+               (int)(short)wRegion, (double)fX, (double)fY, (double)fZ, (int)wAngle);
+    text.Desc("Modifying Char[%s] Position To [%d, %f, %f, %f, %d]", strName.c_str(),
+              (int)wRegion, (double)fX, (double)fY, (double)fZ, (int)wAngle);
+    text.Log("[%s], %d, %f, %f, %f, %d", strName.c_str(), (int)wRegion, (double)fX, (double)fY,
+             (double)fZ, (int)wAngle);
+    return true;
+}
+
+// 1: character rename {JID, DWORD, CharID, old name, new name}; BuildReply tells the
+// GlobalManager.
+bool ReadCharRename(CCharDataEditor* pEditor, CMsg* pMsg, CDE_TEXT& text)
+{
+    DWORD dwCharID;
+    *pMsg >> pEditor->m_dwJID >> pEditor->m_dw8C >> dwCharID;
+    *pMsg >> pEditor->m_strOldName;
+    *pMsg >> pEditor->m_strNewName;
+    if (!IsValidName(pEditor->m_strOldName) || !IsValidName(pEditor->m_strNewName) ||
+        !CharDataEditor_CheckGameServersStopped(pEditor))
+        return false;
+    const char* pszOld = pEditor->m_strOldName.c_str();
+    const char* pszNew = pEditor->m_strNewName.c_str();
+    text.Query("exec _RenameCharNameByID %d, '%s' ", dwCharID, pszNew);
+    text.Desc("Modifying Character Name [Frm:%s To: %s]", pszOld, pszNew);
+    text.Log("[%s] -> [%s]", pszOld, pszNew);
+    return true;
+}
+
+// 2: character deletion {name}.
+bool ReadCharDelete(CCharDataEditor* pEditor, CMsg* pMsg, CDE_TEXT& text)
+{
+    std::string strName;
+    *pMsg >> strName;
+    if (!IsValidName(strName) || !CharDataEditor_CheckGameServersStopped(pEditor))
+        return false;
+    text.Query("exec _ForceDeleteCharacter '%s' ", strName.c_str());
+    text.Desc("Deleting Character [%s]", strName.c_str());
+    text.Log("[%s]", strName.c_str());
+    return true;
+}
+
+// 3: character stats {name, BYTE cur level, BYTE max level, WORD strength, WORD intellect,
+// WORD stat points, DWORD skill points, QWORD gold, QWORD exp offset}.
+bool ReadCharStat(CCharDataEditor* pEditor, CMsg* pMsg, CDE_TEXT& text)
+{
+    std::string strName;
+    BYTE byCurLevel, byMaxLevel;
+    WORD wStrength, wIntellect, wStatPoint;
+    DWORD dwSkillPoint;
+    unsigned __int64 qwGold, qwExpOffset;
+    *pMsg >> strName;
+    *pMsg >> byCurLevel >> byMaxLevel >> wStrength >> wIntellect >> wStatPoint >> dwSkillPoint
+          >> qwGold >> qwExpOffset;
+    if (!IsValidName(strName) || !CharDataEditor_CheckNotInGame(pEditor, strName))
+        return false;
+    text.Query("exec _EditCharStat '%s', %d, %d, %d, %d, %d, %d, %I64d, %I64d", strName.c_str(),
+               byCurLevel, byMaxLevel, wStrength, wIntellect, wStatPoint, dwSkillPoint, qwGold,
+               qwExpOffset);
+    text.Desc("Modifying Character[%s] Stat", strName.c_str());
+    text.Log("[%s], %d, %d, %d, %d, %d, %d, %I64d, %I64d", strName.c_str(), byCurLevel,
+             byMaxLevel, wStrength, wIntellect, wStatPoint, dwSkillPoint, qwGold, qwExpOffset);
+    return true;
+}
+
+// 4: guild {name, new name, BYTE level, DWORD gathered SP, DWORD last / current crest
+// revision}: the same name edits the stats, another one renames the guild.
+bool ReadGuild(CCharDataEditor* pEditor, CMsg* pMsg, CDE_TEXT& text)
+{
+    std::string strGuild, strNewName;
+    BYTE byLevel;
+    DWORD dwGatheredSP, dwLastCrestRev, dwCurCrestRev;
+    *pMsg >> strGuild;
+    *pMsg >> strNewName;
+    *pMsg >> byLevel >> dwGatheredSP >> dwLastCrestRev >> dwCurCrestRev;
+    if (!IsValidName(strGuild) || !IsValidName(strNewName) ||
+        !CharDataEditor_CheckGameServersStopped(pEditor))
+        return false;
+    if (strNewName.compare(strGuild) == 0)
+    {
+        text.Query("exec _EditGuildStat '%s', %d, %d, %d, %d", strGuild.c_str(), byLevel,
+                   dwGatheredSP, dwLastCrestRev, dwCurCrestRev);
+        text.Desc("Modifying Guild[%s] Stat", strGuild.c_str());
+        text.Log("[%s], %d, %d, %d, %d", strGuild.c_str(), byLevel, dwGatheredSP,
+                 dwLastCrestRev, dwCurCrestRev);
+    }
+    else
+    {
+        text.Query("exec _RenameGuildName '%s', '%s' ", strGuild.c_str(), strNewName.c_str());
+        text.Desc("Modifying Guild Name [Frm:%s To: %s]", strGuild.c_str(), strNewName.c_str());
+        text.Log("[%s] -> [%s]", strGuild.c_str(), strNewName.c_str());
+    }
+    return true;
+}
+
+// 6: PK data {name, BYTE daily PK, WORD total PK, DWORD penalty points}.
+bool ReadCharPK(CCharDataEditor* pEditor, CMsg* pMsg, CDE_TEXT& text)
+{
+    std::string strName;
+    BYTE byDailyPK;
+    WORD wTotalPK;
+    DWORD dwPenaltyPoint;
+    *pMsg >> strName;
+    *pMsg >> byDailyPK >> wTotalPK >> dwPenaltyPoint;
+    if (!IsValidName(strName) || !CharDataEditor_CheckNotInGame(pEditor, strName))
+        return false;
+    text.Query("exec _EditCharPK '%s', %d, %d, %d", strName.c_str(), byDailyPK, wTotalPK,
+               dwPenaltyPoint);
+    text.Desc("Modifying Character[%s] PK Data", strName.c_str());
+    text.Log("[%s], %d, %d, %d", strName.c_str(), byDailyPK, wTotalPK, dwPenaltyPoint);
+    return true;
+}
+
+// 7: trade job {name, BYTE job type, BYTE level, DWORD exp, DWORD contribution, DWORD reward}.
+bool ReadTrijob(CCharDataEditor* pEditor, CMsg* pMsg, CDE_TEXT& text)
+{
+    std::string strName;
+    BYTE byJobType, byLevel;
+    DWORD dwExp, dwContribution, dwReward;
+    *pMsg >> strName;
+    *pMsg >> byJobType >> byLevel >> dwExp >> dwContribution >> dwReward;
+    if (!IsValidName(strName) || !CharDataEditor_CheckNotInGame(pEditor, strName))
+        return false;
+    text.Query("exec _SMC_EDIT_TRIJOB '%s', %d, %d, %d, %d, %d", strName.c_str(), byJobType,
+               byLevel, dwExp, dwContribution, dwReward);
+    text.Desc("Modifying Character[%s] Trijob Data", strName.c_str());
+    text.Log("[%s], %d, %d, %d, %d, %d", strName.c_str(), byJobType, byLevel, dwExp,
+             dwContribution, dwReward);
+    return true;
+}
+
+// The item edits (9 inventory, 10 chest, 11 guild chest, 19 avatar inventory): {BYTE operation
+// (m_byItemOp), owner name}, then per operation 1 {BYTE slot [, DWORD RefItemID, QWORD
+// serial]}, 2 / 3 {item row}, 4 {QWORD gold}. Other operations fail without a result.
+struct CDE_ITEM_EDIT
+{
+    BYTE        byType;
+    bool        bGuild;         // the owner check is "game servers stopped", not "offline"
+    bool        bDeleteReadsID; // the deletion also reads the RefItemID and the serial
+    bool        bCheckRowOwner; // add / edit check the owner name of the item row
+    const char* pszDelete;
+    const char* pszDeleteDesc;
+    const char* pszEdit;
+    const char* pszEditDesc;
+    const char* pszAdd;
+    const char* pszAddDesc;
+    const char* pszGold;        // NULL: no gold operation
+    const char* pszGoldDesc;
+};
+
+#define CDE_EDIT_ITEM_ARGS "'%s', %d, %I64d, %d, %d, %I64d, %d, '%s', %d, %I64d, %I64d, %I64d, " \
+    "%I64d, %I64d, %I64d, %I64d, %I64d, %I64d, %I64d, %I64d, %I64d"
+#define CDE_ADD_ITEM_ARGS "'%s', %d, %d, %I64d, %d, '%s', %d, %I64d, %I64d, %I64d, %I64d, " \
+    "%I64d, %I64d, %I64d, %I64d, %I64d, %I64d, %I64d, %I64d"
+
+const CDE_ITEM_EDIT s_aItemEdit[] =
+{
+    { 9, false, true, false,
+      "exec _SMC_DEL_ITEM 0, '%s', %d",
+      "Deleting Character[%s] Inventory Item[Slot: %d]",
+      "exec _SMC_EDIT_ITEM 0, " CDE_EDIT_ITEM_ARGS,
+      "Modifying Character[%s] Inventory Item[Slot: %d]",
+      "exec _SMC_ADD_ITEM 0, " CDE_ADD_ITEM_ARGS,
+      "Adding Character[%s] Inventory Item[RefID: %d]",
+      NULL, NULL },
+    { 10, false, false, true,
+      "exec _SMC_DEL_ITEM 1, '%s', %d",
+      "Deleting Character[%s] Chest Item[Slot: %d]",
+      "exec _SMC_EDIT_ITEM 1, " CDE_EDIT_ITEM_ARGS,
+      "Modifying Character[%s] Chest Item[Slot: %d]",
+      "exec _SMC_ADD_ITEM 1, " CDE_ADD_ITEM_ARGS,
+      "Adding Character[%s] Chest Item[RefItemID: %d]",
+      "exec _SMC_EDIT_USERGOLD '%s', %I64d",
+      "Modifying Character[%s] Chest Gold[NewGold: %I64d]" },
+    // The guild chest deletion uses the text of the character chest.
+    { 11, true, false, true,
+      "exec _SMC_DEL_ITEM 2, '%s', %d",
+      "Deleting Character[%s] Chest Item[Slot: %d]",
+      "exec _SMC_EDIT_ITEM 2, " CDE_EDIT_ITEM_ARGS,
+      "Modifying Guild[%s] Chest Item[Slot: %d]",
+      "exec _SMC_ADD_ITEM 2, " CDE_ADD_ITEM_ARGS,
+      "Adding Guild[%s] Chest Item[RefItemID: %d]",
+      "exec _SMC_EDIT_GUILDGOLD '%s', %I64d",
+      "Modifying Guild[%s] Chest Gold[NewGold: %I64d]" },
+    // The avatar inventory uses the texts of the inventory.
+    { 19, false, true, false,
+      "exec _SMC_DEL_ITEM 3, '%s', %d",
+      "Deleting Character[%s] Inventory Item[Slot: %d]",
+      "exec _SMC_EDIT_ITEM 3, " CDE_EDIT_ITEM_ARGS,
+      "Modifying Character[%s] Inventory Item[Slot: %d]",
+      "exec _SMC_ADD_ITEM 3, " CDE_ADD_ITEM_ARGS,
+      "Adding Character[%s] Inventory Item[RefID: %d]",
+      NULL, NULL },
+};
+
+#undef CDE_EDIT_ITEM_ARGS
+#undef CDE_ADD_ITEM_ARGS
+
+bool ReadItemEdit(CCharDataEditor* pEditor, CMsg* pMsg, CDE_TEXT& text)
+{
+    const CDE_ITEM_EDIT* pEdit = NULL;
+    for (int i = 0; i < _countof(s_aItemEdit); ++i)
+    {
+        if (s_aItemEdit[i].byType == pEditor->m_byQueryType)
+            pEdit = &s_aItemEdit[i];
+    }
+
+    std::string strName;
+    *pMsg >> pEditor->m_byItemOp;
+    *pMsg >> strName;
+    if (!IsValidName(strName))
+        return false;
+    if (pEdit->bGuild ? !CharDataEditor_CheckGameServersStopped(pEditor)
+                      : !CharDataEditor_CheckNotInGame(pEditor, strName))
+        return false;
+
+    BYTE byOp = pEditor->m_byItemOp;
+    if (byOp == 1)
+    {
+        BYTE bySlot;
+        *pMsg >> bySlot;
+        if (pEdit->bDeleteReadsID)
+        {
+            DWORD dwRefItemID;
+            unsigned __int64 qwSerial;
+            *pMsg >> dwRefItemID >> qwSerial;
+            pEditor->m_qwSerial = qwSerial;
+            pEditor->m_dwRefItemID = dwRefItemID;
+        }
+        text.Query(pEdit->pszDelete, strName.c_str(), bySlot);
+        text.Desc(pEdit->pszDeleteDesc, strName.c_str(), bySlot);
+        text.Log("[%s]", strName.c_str());
+        pEditor->m_bySlot = bySlot;
+        return true;
+    }
+    if (byOp == 3 || byOp == 2)
+    {
+        // BUG(SM-341): the owner and creator names of the row go into the statement
+        // unchecked (the owner only for the chests is checked); the in-game check covers the
+        // message name only.
+        CDE_ITEM item;
+        *pMsg >> item;
+        if (pEdit->bCheckRowOwner && !IsValidName(std::string(item.szOwner)))
+            return false;
+        if (byOp == 3)
+        {
+            FormatItemQuery(text, pEdit->pszEdit, item, true);
+            text.Desc(pEdit->pszEditDesc, item.szOwner, item.bySlot);
+            text.Log("[%s]", item.szOwner);
+            pEditor->m_dwRefItemID = item.dwRefItemID;
+            pEditor->m_qwItemID = item.qwItemID;
+            pEditor->m_qwSerial = item.qwSerial;
+        }
+        else
+        {
+            FormatItemQuery(text, pEdit->pszAdd, item, false);
+            text.Desc(pEdit->pszAddDesc, item.szOwner, item.dwRefItemID);
+            text.Log("[%s]", item.szOwner);
+            pEditor->m_dwRefItemID = item.dwRefItemID;
+        }
+        return true;
+    }
+    if (byOp == 4 && pEdit->pszGold)
+    {
+        unsigned __int64 qwGold;
+        *pMsg >> qwGold;
+        text.Query(pEdit->pszGold, strName.c_str(), qwGold);
+        text.Desc(pEdit->pszGoldDesc, strName.c_str(), qwGold);
+        text.Log("[%s], %I64d", strName.c_str(), qwGold);
+        return true;
+    }
+    return false;
+}
+
+// 12: timed job {BYTE operation (m_byItemOp), name}, operation 1 deletes {DWORD ID, BYTE
+// category, DWORD job ID}. No in-game check.
+bool ReadTimedJob(CCharDataEditor* pEditor, CMsg* pMsg, CDE_TEXT& text)
+{
+    std::string strName;
+    *pMsg >> pEditor->m_byItemOp;
+    *pMsg >> strName;
+    if (!IsValidName(strName))
+        return false;
+    if (pEditor->m_byItemOp == 1)
+    {
+        DWORD dwID = 0, dwJobID = 0;
+        BYTE byCategory = 0;
+        *pMsg >> dwID >> byCategory >> dwJobID;
+        text.Query("exec _SMC_DEL_TimedJob '%s', %d", strName.c_str(), dwID);
+        text.Desc("Delete Char TimedJob CharName[%s] Category[%d] JobID[%d]", strName.c_str(),
+                  byCategory, dwJobID);
+        text.Log("[%s]", strName.c_str());
+    }
+    // BUG(SM-340): another operation succeeds with the statement buffer never written.
+    return true;
+}
+
+// 13: guild member nickname {guild, character, nickname}.
+bool ReadGuildNick(CCharDataEditor* pEditor, CMsg* pMsg, CDE_TEXT& text)
+{
+    std::string strGuild, strChar, strNick;
+    *pMsg >> strGuild;
+    *pMsg >> strChar;
+    *pMsg >> strNick;
+    if (!IsValidName(strGuild) || !IsValidName(strChar) || !IsValidName(strNick) ||
+        !CharDataEditor_CheckGameServersStopped(pEditor))
+        return false;
+    text.Query("EXEC _SMC_EDIT_GUILDNICK '%s', '%s', '%s'", strGuild.c_str(), strChar.c_str(),
+               strNick.c_str());
+    text.Desc("Update GuildMember Nickname(guild: %s, char: %s, nick: %s)", strGuild.c_str(),
+              strChar.c_str(), strNick.c_str());
+    text.Log("[%s]", strChar.c_str());
+    return true;
+}
+
+// 14: trade job nickname {name, nickname}; the nickname is checked with the name rule.
+bool ReadTrijobNick(CCharDataEditor* pEditor, CMsg* pMsg, CDE_TEXT& text)
+{
+    std::string strName, strNick;
+    *pMsg >> strName;
+    *pMsg >> strNick;
+    if (!IsValidName(strName) || !IsValidName(strNick) ||
+        !CharDataEditor_CheckNotInGame(pEditor, strName))
+        return false;
+    text.Query("exec _SMC_EDIT_TRIJOBNICK '%s', '%s'", strName.c_str(), strNick.c_str());
+    text.Desc("Modifying Character[%s] Trijob Nickname", strName.c_str());
+    text.Log("[%s], %s", strName.c_str(), strNick.c_str());
+    return true;
+}
+
+// 15: training camp {DWORD camp ID, BYTE rank, DWORD graduate count, DWORD evaluation point}.
+bool ReadTrainingCamp(CCharDataEditor* pEditor, CMsg* pMsg, CDE_TEXT& text)
+{
+    DWORD dwCampID, dwGraduateCount, dwEvaluationPoint;
+    BYTE byRank;
+    *pMsg >> dwCampID >> byRank >> dwGraduateCount >> dwEvaluationPoint;
+    if (!CharDataEditor_CheckGameServersStopped(pEditor))
+        return false;
+    text.Query("exec _SMC_EDIT_TRAINING_CAMP %d, %d, %d, %d", dwCampID, byRank, dwGraduateCount,
+               dwEvaluationPoint);
+    text.Desc("Update TrainingCamp Data(CampID: %d)", dwCampID);
+    text.Log("[%d]", dwCampID);
+    return true;
+}
+
+// 16: training camp deletion {DWORD camp ID}.
+bool ReadTrainingCampDelete(CCharDataEditor* pEditor, CMsg* pMsg, CDE_TEXT& text)
+{
+    DWORD dwCampID;
+    *pMsg >> dwCampID;
+    if (!CharDataEditor_CheckGameServersStopped(pEditor))
+        return false;
+    text.Query("exec _SMC_DEL_TRAINING_CAMP %d", dwCampID);
+    text.Desc("Delete TrainingCamp(CampID: %d)", dwCampID);
+    text.Log("[%d]", dwCampID);
+    return true;
+}
+
+// 17: training camp member {DWORD camp ID, name, DWORD honor point}.
+bool ReadTrainingCampMember(CCharDataEditor* pEditor, CMsg* pMsg, CDE_TEXT& text)
+{
+    DWORD dwCampID, dwHonorPoint;
+    std::string strName;
+    *pMsg >> dwCampID;
+    *pMsg >> strName;
+    *pMsg >> dwHonorPoint;
+    if (!IsValidName(strName) || !CharDataEditor_CheckGameServersStopped(pEditor))
+        return false;
+    text.Query("exec _SMC_EDIT_TRAINING_CAMP_MEMBER %d, '%s', %u", dwCampID, strName.c_str(),
+               dwHonorPoint);
+    text.Desc("Update TrainingCamp Member Data(CampID: %d, Member: %s)", dwCampID,
+              strName.c_str());
+    text.Log("[%s]", strName.c_str());
+    return true;
+}
+
+// 18: training camp member deletion {DWORD camp ID, name}.
+bool ReadTrainingCampMemberDelete(CCharDataEditor* pEditor, CMsg* pMsg, CDE_TEXT& text)
+{
+    DWORD dwCampID;
+    std::string strName;
+    *pMsg >> dwCampID;
+    *pMsg >> strName;
+    if (!IsValidName(strName) || !CharDataEditor_CheckGameServersStopped(pEditor))
+        return false;
+    text.Query("exec _SMC_DEL_TRAINING_CAMP_MEMBER %d, '%s'", dwCampID, strName.c_str());
+    text.Desc("Delete TrainingCamp Member Data(CampID: %d, Member: %s)", dwCampID,
+              strName.c_str());
+    text.Log("[%s]", strName.c_str());
+    return true;
+}
+
+// 20: collection book {BYTE action (1 register), name, DWORD theme ID, DWORD slot index}.
+bool ReadCollectionBook(CCharDataEditor* pEditor, CMsg* pMsg, CDE_TEXT& text)
+{
+    BYTE byAction = 0;
+    std::string strName;
+    DWORD dwThemeID = 0, dwSlotIndex = 0;
+    *pMsg >> byAction;
+    *pMsg >> strName;
+    *pMsg >> dwThemeID >> dwSlotIndex;
+    if (!IsValidName(strName) || !CharDataEditor_CheckNotInGame(pEditor, strName))
+        return false;
+    text.Query("exec _SMC_UPDATE_COLLECTION_BOOK '%s', %u, %u, %u", strName.c_str(), byAction,
+               dwThemeID, dwSlotIndex);
+    text.Desc("Modifying Character[%s] CollectionBook [Action : %s] [ThemeID : %u] "
+              "[SlotIndex : %u]", strName.c_str(), byAction == 1 ? "Register" : "Unregister",
+              dwThemeID, dwSlotIndex);
+    text.Log("[%s], %u, %u, %u", strName.c_str(), byAction, dwThemeID, dwSlotIndex);
+    return true;
+}
+
+// The edit types of CCharDataEditor (jump table 0x48b8d8); NULL: invalid message.
+const CDE_READER s_apfnEditReader[21] =
+{
+    ReadCharPosition,               // 0
+    ReadCharRename,                 // 1
+    ReadCharDelete,                 // 2
+    ReadCharStat,                   // 3
+    ReadGuild,                      // 4
+    NULL,                           // 5
+    ReadCharPK,                     // 6
+    ReadTrijob,                     // 7
+    NULL,                           // 8
+    ReadItemEdit,                   // 9  inventory
+    ReadItemEdit,                   // 10 chest
+    ReadItemEdit,                   // 11 guild chest
+    ReadTimedJob,                   // 12
+    ReadGuildNick,                  // 13
+    ReadTrijobNick,                 // 14
+    ReadTrainingCamp,               // 15
+    ReadTrainingCampDelete,         // 16
+    ReadTrainingCampMember,         // 17
+    ReadTrainingCampMemberDelete,   // 18
+    ReadItemEdit,                   // 19 avatar inventory
+    ReadCollectionBook,             // 20
+};
+
+} // namespace
+
 bool CCharDataEditor::ReadRequest(CMsg* pMsg, DWORD dwRequestID, std::string* pstrOperator)
 {
-    // Pending: the request reader (0x4883e0, 0x34a9 bytes, about 20 edit types) has no
-    // pseudocode and is not ported yet. It sets the request ID and the operator first.
     m_dwRequestID = dwRequestID;
     m_strOperator.assign(*pstrOperator, 0, std::string::npos);
-    (void)pMsg;
-    m_byResult = 5;
-    return false;
+
+    CDE_TEXT text;
+    memset(text.szLog, 0, sizeof(text.szLog));
+    memcpy(text.szDesc, "No Log. Some Error was Occurred", 0x20);
+    memset(text.szDesc + 0x20, 0, 0xDF);
+
+    try
+    {
+        if (m_pReply)
+        {
+            BSAssertFail();
+            m_pReply->Free();
+        }
+        m_pReply = CMassiveMsg::Alloc(ServerFramework::MASSIVE_MODE_WRITE);
+        *pMsg >> m_byQueryType;
+
+        if (m_byQueryType >= _countof(s_apfnEditReader) || !s_apfnEditReader[m_byQueryType])
+            throw 0;
+        if (!s_apfnEditReader[m_byQueryType](this, pMsg, text))
+            return false;
+
+        m_strQuery.assign(text.szQuery, strlen(text.szQuery));
+        m_strMessage.assign(text.szDesc, strlen(text.szDesc));
+        m_strEditDesc.assign(text.szLog, strlen(text.szLog));
+        return true;
+    }
+    catch (...)
+    {
+        // CCharDataEditor::vf01 catch block (0x48b889)
+        LogPrintf(0x1000000, "CharDataEdit Request Message is invalid!!");
+        m_byResult = 5;
+        return false;
+    }
 }
 
 bool CCharDataEditor::Execute()
