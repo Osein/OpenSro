@@ -12,12 +12,11 @@
 #include "BSLib/Util/TimeSpan.h"
 #include "ServerFramework/OverlapJob.h"
 #include "ShardManager/ServerEventExtern.h"
-#include "ShardManager/ShardAdminExtern.h"
 
 // What the association reputation, the log jobs and the other SM_world1 parts use from parts of
 // SR_ShardManager that are ported elsewhere. Only the calls made here are declared; the owners
 // replace these declarations. CShardDB, g_pMainProcess and CMainProcess come from ShardExtern.h,
-// MainProcess_PostDBJob from ServerEventExtern.h, the AQ jobs from ShardAdminExtern.h.
+// MainProcess_PostDBJob from ServerEventExtern.h.
 
 class CDBTable;
 class CMainProcess;

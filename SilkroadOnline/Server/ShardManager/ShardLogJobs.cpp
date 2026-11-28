@@ -3,6 +3,8 @@
 #include <strsafe.h>
 #include <time.h>
 
+#include "ShardManager/AQScheduleJobs.h"
+#include "ShardManager/AQServerEvent.h"
 #include "ShardManager/ServerEvent.h"
 #include "ShardManager/ShardWorld1Extern.h"
 #include "ShardManager/ShardWorldExtern.h"
@@ -15,8 +17,8 @@ enum
 
 // The end of every log function: the row goes into the job, the job to the DB task. FALSE (the
 // job back to its pool) when the row cannot be built.
-static BOOL ServerEventLog_Post(ServerFramework::COverlapJob* pJob, const char* pszDesc,
-                                BYTE byType, CServerEvent* pEvent)
+static BOOL ServerEventLog_Post(AQ_ServerEventLog* pJob, const char* pszDesc, BYTE byType,
+                                CServerEvent* pEvent)
 {
     std::string strDesc(pszDesc);
     if (!DB_Insert_LogServerEvent(strDesc, byType, pJob, pEvent->GetID()))
@@ -33,7 +35,7 @@ static BOOL ServerEventLog_Post(ServerFramework::COverlapJob* pJob, const char* 
 
 BOOL ServerEventLog_LogDetecting(CServerEvent* pEvent)
 {
-    ServerFramework::COverlapJob* pJob = AQ_ServerEventLog_Alloc();
+    AQ_ServerEventLog* pJob = AQ_ServerEventLog::Alloc();
     RefServerEvent* pRef;
     if (!pJob || (pRef = pEvent->m_pRef) == NULL)
     {
@@ -65,7 +67,7 @@ BOOL ServerEventLog_LogDetecting(CServerEvent* pEvent)
 
 BOOL ServerEventLog_LogCompletion(CServerEvent* pEvent)
 {
-    ServerFramework::COverlapJob* pJob = AQ_ServerEventLog_Alloc();
+    AQ_ServerEventLog* pJob = AQ_ServerEventLog::Alloc();
     if (!pJob)
     {
         BSAssertFail();
@@ -88,7 +90,7 @@ BOOL ServerEventLog_LogCompletion(CServerEvent* pEvent)
 
 BOOL ServerEventLog_LogReward(DWORD dwJID, CServerEvent* pEvent)
 {
-    ServerFramework::COverlapJob* pJob = AQ_ServerEventLog_Alloc();
+    AQ_ServerEventLog* pJob = AQ_ServerEventLog::Alloc();
     if (!pJob)
     {
         BSAssertFail();
@@ -134,7 +136,7 @@ BOOL ServerEventLog_LogReward(DWORD dwJID, CServerEvent* pEvent)
 void Schedule_InsertLogAsync(std::string strModule, int nServerID, std::string strDefine,
                              DWORD dwScheduleID, std::string strState)
 {
-    ServerFramework::COverlapJob* pJob = AQ_ScheduleInsertLog_Alloc();
+    AQ_ScheduleInsertLog* pJob = AQ_ScheduleInsertLog::Alloc();
     if (!pJob)
     {
         BSAssertFail();

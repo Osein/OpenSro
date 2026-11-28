@@ -4,14 +4,14 @@
 
 #include <vector>
 
-#include "ShardManager/ShardAdminExtern.h"
+#include "ShardManager/AQServerEvent.h"
 #include "ShardManager/ShardExtern.h"
 #include "ShardManager/ShardLogJobs.h"
 
 // What the server events use from parts of SR_ShardManager that are ported elsewhere. Only the
 // calls made here are declared; the owners replace these declarations. CMainProcess,
 // g_pMainProcess and the client manager come from ShardExtern.h, the AQ_ServerEvent job from
-// ShardAdminExtern.h, the server event log rows from ShardLogJobs.h.
+// AQServerEvent.h, the server event log rows from ShardLogJobs.h.
 
 class CDBTable;
 class CMsg;

@@ -4,6 +4,7 @@
 
 #include "BSLib/DB/Database.h"
 #include "ServerCommon/InstanceRecords.h"
+#include "ShardManager/AdminQueryJobs.h"
 #include "ShardManager/ShardScheduleExtern.h"
 #include "ShardManager/ShardWorld1Extern.h"
 #include "ShardManager/ShardWorldExtern.h"
@@ -184,7 +185,7 @@ void CAssociationReputationMgr::FlushIfChanged()
 BOOL CAssociationReputationMgr::QueueDBUpdate(const ASSOC_TEMPLE_POINTS* pHaroeris,
                                               const ASSOC_TEMPLE_POINTS* pAnubis)
 {
-    ServerFramework::COverlapJob* pJob = AQ_AssociationReputation_Alloc();
+    AQ_AssociationReputation* pJob = AQ_AssociationReputation::Alloc();
     if (!DB_UpdateAssociationReputation(pJob, &pAnubis->nHunter, &pHaroeris->nHunter))
     {
         pJob->ReturnToPool();

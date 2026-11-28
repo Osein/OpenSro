@@ -1,5 +1,5 @@
-// AQ_SiegeDataUpdater::ExecuteAndReply (0x401990) and its two game server notifications. The
-// class belongs to SM_admin; its stand-in is in ShardAdminExtern.h.
+// AQ_SiegeDataUpdater::ExecuteAndReply (0x401990) and its two game server notifications (the
+// class is in AdminQueryJobs.h).
 
 #include <winsock2.h>
 #include <windows.h>
@@ -10,7 +10,7 @@
 #include "BSNet/Msg.h"
 #include "BSNet/NetEngine.h"
 #include "ServerFramework/MassiveMsg.h"
-#include "ShardManager/ShardAdminExtern.h"
+#include "ShardManager/AdminQueryJobs.h"
 #include "ShardManager/ShardWorld1Extern.h"
 #include "ShardManager/ShardWorldExtern.h"
 
