@@ -79,3 +79,19 @@ BOOL MainProcess_IsValidCharName(const std::string& strCharName);
 // Provided by the guild group (CGuildMgrCommon::FindGuild 0x40bf10 on the guild manager, then
 // the name of the guild): leaves strName unchanged when there is no such guild.
 void GuildManager_FindGuildName(int nGuildID, std::string& strName);
+
+// Provided by SM_world3 (ShardSchedule.h: CShard_ScheduleManager, the static object
+// g_ShardScheduleManager 0x8a7b24, and sScheduleRow::Copy 0x663560). Only the calls of the
+// schedule jobs are declared.
+namespace NewSchedule
+{
+struct SCHEDULE_DATA;
+}
+// CShard_ScheduleManager::DumpSchedules (0x663aa0).
+void ShardScheduleManager_DumpSchedules();
+// g_ShardScheduleManager.AddSchedule / RemoveSchedule (CScheduleManager 0x6c0090 / 0x6c0290).
+void ShardScheduleManager_AddSchedule(const NewSchedule::SCHEDULE_DATA* pData);
+void ShardScheduleManager_RemoveSchedule(const NewSchedule::SCHEDULE_DATA* pData);
+// sScheduleRow::Copy (0x663560).
+NewSchedule::SCHEDULE_DATA* CopyScheduleRow(const NewSchedule::SCHEDULE_DATA* pSrc,
+                                            NewSchedule::SCHEDULE_DATA* pDst);
