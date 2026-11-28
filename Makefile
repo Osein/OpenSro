@@ -378,7 +378,8 @@ SHARD_WORLD1_OBJS = $(OBJ)\ShardManager\AssociationReputation.obj \
 	$(OBJ)\ShardManager\ClientManagerWorld1.obj
 
 # SR_ShardManager admin queries: the AQ jobs of the service manager console, the shard
-# maintainer and the one-by-one processor. "nmake shard_admin" compiles them.
+# maintainer and the one-by-one processor. "nmake shard_admin" compiles them, nothing links them
+# yet (the exe link will need wininet.lib for CCgiCallForMuiltiFarmMgr).
 SHARD_ADMIN_OBJS = $(OBJ)\ShardManager\AQBase.obj \
 	$(OBJ)\ShardManager\AdminQueryJobs.obj \
 	$(OBJ)\ShardManager\ShardMaintainer.obj \
