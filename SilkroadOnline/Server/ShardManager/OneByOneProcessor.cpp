@@ -191,9 +191,9 @@ void COneByOneProcessor::StartSilkQuery_631A(JOB_DATA* pJob)
     if (SelfDivision_IsInGroup3() == 1)
         return;
 
-    if (!g_pShardMainProcess)
+    if (!g_pMainProcess)
         BSAssertFail();
-    if (ServerFramework::RelayMsgToBody_6008(g_pShardMainProcess, pMsg,
+    if (ServerFramework::RelayMsgToBody_6008(g_pMainProcess, pMsg,
                                              g_pSelfBody->pDivision->wGlobalManagerID, 0, 0,
                                              (DWORD)pJob))
     {

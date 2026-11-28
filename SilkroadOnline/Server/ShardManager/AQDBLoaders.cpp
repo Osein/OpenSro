@@ -14,7 +14,7 @@ CDBTable* GetTable(DWORD nIndex)
 {
     if (!g_pShardDB)
         BSAssertFail();
-    return ShardDB_GetTable(g_pShardDB, nIndex);
+    return g_pShardDB->GetTable(nIndex);
 }
 
 // {CALL proc (id, ?)} with a BIGINT output parameter.
@@ -31,7 +31,7 @@ BOOL GetGold(__int64* pGold, int nID, const char* pszFormat)
     }
     if (!g_pShardDB)
         BSAssertFail();
-    if (CDatabase::ExecDirectWithReturnValue(ShardDB_GetSession(g_pShardDB), 4, szQuery, 5,
+    if (CDatabase::ExecDirectWithReturnValue(g_pShardDB->GetSession(), 4, szQuery, 5,
                                              &qwValue) & ~1)
         return FALSE;
     if (qwValue < 0)
@@ -56,7 +56,7 @@ int GetIDByName(const std::string& strName, const char* pszFormat)
     anValue[1] = 0;
     if (!g_pShardDB)
         BSAssertFail();
-    if (CDatabase::ExecDirectWithReturnValue(ShardDB_GetSession(g_pShardDB), 4, szQuery, 3,
+    if (CDatabase::ExecDirectWithReturnValue(g_pShardDB->GetSession(), 4, szQuery, 3,
                                              anValue) & ~1)
         return 0;
     return anValue[0] < 0 ? 0 : anValue[0];
@@ -152,7 +152,7 @@ BYTE AQ_DB_SelectItems(__int64 qwOwnerID, int nOwnerType, CDBRecordList* pSlots,
 
     if (!pSlotTable->SelectWhere(szQuery, 4, pSlots, 1))
     {
-        DB_FreeRecordList(pSlots, pSlotTable);
+        CDBObjectList_DetachAndClear(pSlots, pSlotTable);
         return 7;
     }
 
@@ -213,7 +213,7 @@ BYTE AQ_DB_SelectItems(__int64 qwOwnerID, int nOwnerType, CDBRecordList* pSlots,
         if (!pItemTable->SelectCustom(strQuery, 4, pItems, 1))
         {
             // The slot rows stay in pSlots.
-            DB_FreeRecordList(pItems, pItemTable);
+            CDBObjectList_DetachAndClear(pItems, pItemTable);
             return 7;
         }
     }
@@ -221,9 +221,9 @@ BYTE AQ_DB_SelectItems(__int64 qwOwnerID, int nOwnerType, CDBRecordList* pSlots,
     if (pSlots->size() == pItems->size())
         return 1;
     if (pSlotTable)
-        DB_FreeRecordList(pSlots, pSlotTable);
+        CDBObjectList_DetachAndClear(pSlots, pSlotTable);
     if (pItemTable)
-        DB_FreeRecordList(pItems, pItemTable);
+        CDBObjectList_DetachAndClear(pItems, pItemTable);
     return 13;
 }
 
@@ -241,7 +241,7 @@ BYTE AQ_DB_LoadByItemDBID(__int64 qwItemDBID, CDBRecordList* pList)
     }
     if (!pTable->SelectWhere(szClause, 4, pList, 1))
     {
-        DB_FreeRecordList(pList, pTable);
+        CDBObjectList_DetachAndClear(pList, pTable);
         return 7;
     }
     return 1;
@@ -254,7 +254,7 @@ BYTE AQ_DB_LoadOpenMarket(CDBRecordList* pList, const std::string& strCharName)
     std::string strFound;
     if (!g_pShardDB)
         BSAssertFail();
-    if (ShardDB_CheckSqlInjection(g_pShardDB, strCharName, strFound) == 1)
+    if (g_pShardDB->CheckSqlInjection(strCharName, strFound) == 1)
     {
         LogPrintf(0x2000001, "##%s %d## Query injection try by SMC! [Try string: %s] [Found "
                   "string: %s]", "AQ_Base::LoadOpenMarket", 667, strCharName.c_str(),
@@ -263,7 +263,7 @@ BYTE AQ_DB_LoadOpenMarket(CDBRecordList* pList, const std::string& strCharName)
     }
     if (!g_pShardDB)
         BSAssertFail();
-    CDBTable* pTable = ShardDB_GetTable(g_pShardDB, SHARD_TABLE_OPEN_MARKET);
+    CDBTable* pTable = g_pShardDB->GetTable(SHARD_TABLE_OPEN_MARKET);
     char szQuery[0xC00];
     memset(szQuery, 0, sizeof(szQuery));
     if (StringCchPrintfA(szQuery, 0xC00,
@@ -278,7 +278,7 @@ BYTE AQ_DB_LoadOpenMarket(CDBRecordList* pList, const std::string& strCharName)
     std::string strQuery(szQuery);
     if (!pTable->SelectCustom(strQuery, 4, pList, 0))
     {
-        DB_FreeRecordList(pList, pTable);
+        CDBObjectList_DetachAndClear(pList, pTable);
         return 7;
     }
     return 1;
@@ -298,13 +298,13 @@ BYTE AQ_DB_LoadCharSkills(int nCharID, CDBRecordList* pSkills, CDBRecordList* pM
     }
     if (!pSkillTable->SelectWhere(szClause, 4, pSkills, 1))
     {
-        DB_FreeRecordList(pSkills, pSkillTable);
+        CDBObjectList_DetachAndClear(pSkills, pSkillTable);
         return 7;
     }
     if (!pMasteryTable->SelectWhere(szClause, 4, pMasteries, 1))
     {
         // BUG(SM-309): the mastery records go back through the skill table.
-        DB_FreeRecordList(pMasteries, pSkillTable);
+        CDBObjectList_DetachAndClear(pMasteries, pSkillTable);
         return 7;
     }
     return 1;
@@ -327,7 +327,7 @@ BYTE AQ_DB_LoadCharTrainingCamp(CDBRecordList* pMembers, CDBRecordList* pBuffs,
     anValue[1] = 0;
     if (!g_pShardDB)
         BSAssertFail();
-    if (CDatabase::ExecDirectWithReturnValue(ShardDB_GetSession(g_pShardDB), 4, szQuery, 3,
+    if (CDatabase::ExecDirectWithReturnValue(g_pShardDB->GetSession(), 4, szQuery, 3,
                                              anValue) & ~1)
         return 2;
     int nCampID = anValue[0];
@@ -346,7 +346,7 @@ BYTE AQ_DB_LoadCharTrainingCamp(CDBRecordList* pMembers, CDBRecordList* pBuffs,
     }
     if (!pCampTable->SelectWhere(szClause, 4, pCamps, 1))
     {
-        DB_FreeRecordList(pCamps, pCampTable);
+        CDBObjectList_DetachAndClear(pCamps, pCampTable);
         return 7;
     }
     size_t nCamps = pCamps->size();
@@ -370,14 +370,14 @@ BYTE AQ_DB_LoadCharTrainingCamp(CDBRecordList* pMembers, CDBRecordList* pBuffs,
     }
     if (!pMemberTable->SelectWhere(szClause, 4, pMembers, 1))
     {
-        DB_FreeRecordList(pMembers, pMemberTable);
+        CDBObjectList_DetachAndClear(pMembers, pMemberTable);
         LogPrintf(0, "There are no member in this user camp. ( char name : %s)",
                   strCharName.c_str());
     }
     if (!pBuffTable->SelectWhere(szClause, 4, pBuffs, 1))
     {
         // BUG(SM-309): the buff records go back through the member table.
-        DB_FreeRecordList(pBuffs, pMemberTable);
+        CDBObjectList_DetachAndClear(pBuffs, pMemberTable);
         LogPrintf(0, "There are no member buff status in this user camp. ( char name : %s)",
                   strCharName.c_str());
     }
@@ -405,7 +405,7 @@ BYTE AQ_DB_LoadGuildData(CDBRecordList* pAlliances, CDBRecordList* pFortresses,
     }
     if (!pGuildTable->SelectWhere(szClause, 4, pGuilds, 1))
     {
-        DB_FreeRecordList(pGuilds, pGuildTable);
+        CDBObjectList_DetachAndClear(pGuilds, pGuildTable);
         return 7;
     }
     size_t nGuilds = pGuilds->size();
@@ -429,7 +429,7 @@ BYTE AQ_DB_LoadGuildData(CDBRecordList* pAlliances, CDBRecordList* pFortresses,
     }
     if (!pMemberTable->SelectWhere(szClause, 4, pMembers, 1))
     {
-        DB_FreeRecordList(pMembers, pMemberTable);
+        CDBObjectList_DetachAndClear(pMembers, pMemberTable);
         LogPrintf(0, "There are no member in this guild. ( guild name : %s)", pszName);
     }
     if (StringCchPrintfA(szClause, 0xC00, "WHERE ID = %d", AQ_DB_RecordInt(pGuilds, 80)) != S_OK)
@@ -439,7 +439,7 @@ BYTE AQ_DB_LoadGuildData(CDBRecordList* pAlliances, CDBRecordList* pFortresses,
     }
     if (!pAllianceTable->SelectWhere(szClause, 4, pAlliances, 1))
     {
-        DB_FreeRecordList(pAlliances, pAllianceTable);
+        CDBObjectList_DetachAndClear(pAlliances, pAllianceTable);
         LogPrintf(0, "There are no alliance for this guild. ( guild name : %s)", pszName);
     }
     if (StringCchPrintfA(szClause, 0xC00, "WHERE GuildID = %d", nGuildID) != S_OK)
@@ -449,7 +449,7 @@ BYTE AQ_DB_LoadGuildData(CDBRecordList* pAlliances, CDBRecordList* pFortresses,
     }
     if (!pFortressTable->SelectWhere(szClause, 4, pFortresses, 1))
     {
-        DB_FreeRecordList(pFortresses, pFortressTable);
+        CDBObjectList_DetachAndClear(pFortresses, pFortressTable);
         LogPrintf(0, "This guild don`t have Siege Fortress. ( guild name : %s)", pszName);
     }
     return 1;
@@ -474,7 +474,7 @@ BYTE AQ_DB_LoadFortressData(CDBRecordList* pMembers, CDBRecordList* pRequests, i
     }
     if (!pFortressTable->SelectWhere(szClause, 4, pFortresses, 1))
     {
-        DB_FreeRecordList(pFortresses, pFortressTable);
+        CDBObjectList_DetachAndClear(pFortresses, pFortressTable);
         return 7;
     }
     size_t nFortresses = pFortresses->size();
@@ -500,7 +500,7 @@ BYTE AQ_DB_LoadFortressData(CDBRecordList* pMembers, CDBRecordList* pRequests, i
     }
     if (!pStructTable->SelectWhere(szClause, 4, pStructs, 1))
     {
-        DB_FreeRecordList(pStructs, pStructTable);
+        CDBObjectList_DetachAndClear(pStructs, pStructTable);
         LogPrintf(0, "There are no struct in this fortress. ( fortress id : %d)", nFortressID);
     }
     if (StringCchPrintfA(szClause, 0xC00, "WHERE GuildID = %d", nGuildID) != S_OK)
@@ -510,7 +510,7 @@ BYTE AQ_DB_LoadFortressData(CDBRecordList* pMembers, CDBRecordList* pRequests, i
     }
     if (!pMemberTable->SelectWhere(szClause, 4, pMembers, 1))
     {
-        DB_FreeRecordList(pMembers, pMemberTable);
+        CDBObjectList_DetachAndClear(pMembers, pMemberTable);
         LogPrintf(0, "There are no guild member list. ( guild id : %d)", nGuildID);
     }
     if (StringCchPrintfA(szClause, 0xC00, "WHERE FortressID = %d", nRecordFortressID) != S_OK)
@@ -520,7 +520,7 @@ BYTE AQ_DB_LoadFortressData(CDBRecordList* pMembers, CDBRecordList* pRequests, i
     }
     if (!pRequestTable->SelectWhere(szClause, 4, pRequests, 1))
     {
-        DB_FreeRecordList(pRequests, pRequestTable);
+        CDBObjectList_DetachAndClear(pRequests, pRequestTable);
         LogPrintf(0, "There are no request guild list. ( fortress id : %d)", nRecordFortressID);
     }
     return 1;

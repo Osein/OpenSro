@@ -49,6 +49,13 @@ public:
 // g_pMainProcess (0x8a88f8)
 extern CMainProcess* g_pMainProcess;
 
+// CharName_IsValid (0x40f200): the character name rule of the main process (the callers assert
+// g_pMainProcess before the call).
+BOOL CharName_IsValid(const std::string& strName);
+
+// DB_AddLogChar (0x412310): one row of the character log (_AddLogChar).
+void DB_AddLogChar(int nCharID, int nJID, int nParam, BYTE byEventID, int nData);
+
 // ---------------------------------------------------------------------------------------------
 // Provided by SM_main (CShardDB)
 
@@ -57,12 +64,17 @@ class CShardDB
 public:
     // +0x08
     CDBSessionMgr* GetSession();
+    // +0x0C: the session pool of the log database.
+    CDBSessionMgr* GetLogSession();
     // +0x18: the instance tables (index = slot; _Friend 0x14, _Memo 0x15, _ServerEvent 0x35,
     // _ServerEventReward 0x36). The callers check the size themselves (vector::at).
     std::vector<CDBTable*>& GetInstanceTables();
     // CDBConnPool_GetConnAt (0x4013d0, also inlined): table nIndex of the table vector at
     // +0x18; asserts and returns NULL when the vector is shorter.
     CDBTable* GetTable(int nIndex);
+    // CShardDB::CheckSqlInjection (0x527390): 1 when str contains a forbidden token (written to
+    // strFound).
+    int CheckSqlInjection(const std::string& str, std::string& strFound);
 };
 
 // g_pShardDB (dword_8A8948); GetSingleton_CShardDB (0x401c10) asserts it.

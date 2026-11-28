@@ -157,7 +157,7 @@ CBaseCharDataEditor::~CBaseCharDataEditor()
 
 bool CharDataEditor_CheckNotInGame(CBaseCharDataEditor* pEditor, const std::string& strName)
 {
-    if (!ClientMgr_FindUserByCharName(strName))
+    if (!GetSingleton_CClientManager()->FindUserByCharName(strName))
         return true;
     LogPrintf(0x1000000, "User In Game!! - CharEdit");
     pEditor->m_byResult = 14;
@@ -268,7 +268,9 @@ bool CCharDataSelector::ReadRequest(CMsg* pMsg, DWORD dwRequestID, std::string* 
 
         if (bName)
         {
-            if (!MainProcess_IsValidCharName(strName))
+            if (!g_pMainProcess)
+                BSAssertFail();
+            if (!CharName_IsValid(strName))
                 return false;
             if (pQuery->byRead == CDS_NAME_NOT_IN_GAME &&
                 !CharDataEditor_CheckNotInGame(this, strName))
@@ -467,7 +469,9 @@ void FormatItemQuery(CDE_TEXT& text, const char* pszFormat, const CDE_ITEM& item
 
 bool IsValidName(const std::string& strName)
 {
-    return MainProcess_IsValidCharName(strName) != FALSE;
+    if (!g_pMainProcess)
+        BSAssertFail();
+    return CharName_IsValid(strName) != FALSE;
 }
 
 // Reads the character name and checks it (name rule, the character must be offline).
@@ -1001,7 +1005,7 @@ bool CCharDataEditor::Execute()
     {
         if (!g_pShardDB)
             BSAssertFail();
-        CDatabase::ExecDirectWithReturnValue(ShardDB_GetLogSession(g_pShardDB), 2,
+        CDatabase::ExecDirectWithReturnValue(g_pShardDB->GetLogSession(), 2,
                                              m_strLogQuery.c_str(), 1, NULL);
     }
     return true;
@@ -1066,10 +1070,10 @@ bool CCharDataEditor::BuildReply()
         pMsg->WriteBytes(&m_dwJID, 4);
         *pMsg << m_strNewName;
         *pMsg << m_strOldName;
-        if (!g_pShardMainProcess)
+        if (!g_pMainProcess)
             BSAssertFail();
         WORD wGlobalManagerID = g_pSelfBody->pDivision->wGlobalManagerID;
-        if (!ServerFramework::RelayMsgToBody_6008(g_pShardMainProcess, pMsg, wGlobalManagerID,
+        if (!ServerFramework::RelayMsgToBody_6008(g_pMainProcess, pMsg, wGlobalManagerID,
                                                   0, 0, 0))
         {
             LogPrintf(0x2000001, "Failed To Change Character Name of WebDB[JID: %d, Old: %s, "

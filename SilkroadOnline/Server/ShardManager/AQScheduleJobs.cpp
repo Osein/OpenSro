@@ -266,7 +266,7 @@ bool AQ_ScheduleLog::Execute()
 
     if (!g_pShardDB)
         BSAssertFail();
-    CDBTable* pTable = ShardDB_GetTable(g_pShardDB, SHARD_TABLE_LOG_SCHEDULE);
+    CDBTable* pTable = g_pShardDB->GetTable(SHARD_TABLE_LOG_SCHEDULE);
     if (!pTable)
     {
         BSAssertFail();
@@ -323,7 +323,7 @@ bool AQ_ScheduleInsertLog::Execute()
 {
     if (!g_pShardDB)
         BSAssertFail();
-    int nResult = CDatabase::ExecDirectWithReturnValue(ShardDB_GetLogSession(g_pShardDB), 6,
+    int nResult = CDatabase::ExecDirectWithReturnValue(g_pShardDB->GetLogSession(), 6,
                                                        m_strQuery.c_str(), 0, NULL);
     // SQL_SUCCESS or SQL_SUCCESS_WITH_INFO
     if ((nResult & ~1) == 0)
@@ -337,7 +337,7 @@ BOOL DB_Insert_LogSchedule(AQ_ScheduleInsertLog* pJob, std::string strModule, in
                            std::string strDefine, DWORD dwScheduleID, std::string strState,
                            CDateTime dt)
 {
-    if (!g_pShardMainProcess)
+    if (!g_pMainProcess)
         BSAssertFail();
     CTask* pOwner = MainProcess_GetJobOwnerTask();
     if (!pOwner)
@@ -494,7 +494,7 @@ bool AQ_ScheduleChangeStandardShard::Execute()
 bool AQ_ScheduleChangeStandardShard::ReadRequestList(CMassiveMsg* pMsg, DWORD dwRelayID,
                                                      DWORD dwSessionID)
 {
-    if (!g_pShardMainProcess)
+    if (!g_pMainProcess)
         BSAssertFail();
     CTask* pOwner = MainProcess_GetJobOwnerTask();
     if (!pOwner)
@@ -526,9 +526,9 @@ bool AQ_ScheduleChangeStandardShard::OnComplete()
         BSAssertFail();
         return true;
     }
-    if (!g_pShardMainProcess)
+    if (!g_pMainProcess)
         BSAssertFail();
-    g_pShardMainProcess->SendRelayReplyMassive(m_dwSessionID, m_dwRelayID, m_pResponse);
+    g_pMainProcess->SendRelayReplyMassive(m_dwSessionID, m_dwRelayID, m_pResponse);
     m_pResponse = NULL;
     LogPrintf(0x1000000, "Scheduleing : All Shard Scheduleing is Successed !!");
     return true;
@@ -537,9 +537,9 @@ bool AQ_ScheduleChangeStandardShard::OnComplete()
 bool AQ_ScheduleChangeStandardShard::OnFail()
 {
     LogPrintf(0x1000000, "Scheduleing : All Shard Scheduleing is Failed !!");
-    if (!g_pShardMainProcess)
+    if (!g_pMainProcess)
         BSAssertFail();
-    g_pShardMainProcess->SendRelayReplyMassive(m_dwSessionID, m_dwRelayID, m_pResponse);
+    g_pMainProcess->SendRelayReplyMassive(m_dwSessionID, m_dwRelayID, m_pResponse);
     m_pResponse = NULL;
     return true;
 }

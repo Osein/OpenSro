@@ -51,7 +51,7 @@ bool AQ_SiegeDataUpdater::ReadRequest(CMsg* pMsg, DWORD dwRelayID)
         {
             *pMsg >> m_strIntroduction;
             std::string strFound;
-            if (ShardDB_CheckSqlInjection(g_pShardDB, m_strIntroduction, strFound) == 1)
+            if (g_pShardDB->CheckSqlInjection(m_strIntroduction, strFound) == 1)
             {
                 LogPrintf(0x2000001, "SMC AQ_SiegeDataUpdater QueryTarget[%d] Injection[%s]",
                           m_byQueryTarget, m_strIntroduction.c_str());
@@ -113,7 +113,7 @@ bool AQ_AssociationReputation::Execute()
     memset(&query, 0, sizeof(query));
     if (!g_pShardDB)
         BSAssertFail();
-    query.m_pSession = ShardDB_GetSession(g_pShardDB);
+    query.m_pSession = g_pShardDB->GetSession();
     query.m_pTrigger = NULL;
     query.m_pBuffer = (BYTE*)&nResult;
     query.m_nBufferSize = 4;
@@ -126,7 +126,7 @@ bool AQ_AssociationReputation::Execute()
 BOOL DB_UpdateAssociationReputation(AQ_AssociationReputation* pJob, const int* pnAnubis,
                                     const int* pnHaroeris)
 {
-    if (!g_pShardMainProcess)
+    if (!g_pMainProcess)
         BSAssertFail();
     CTask* pOwner = MainProcess_GetJobOwnerTask();
     if (!pOwner)
@@ -268,7 +268,7 @@ void AQ_CharDataEditor2::ReleaseId()
 void AQ_CharDataEditor2::Setup(const std::string& strNewName, CMsg* pMsg, DWORD dwParam,
                                BYTE byType, DWORD dwCharID, const std::string& strOldName)
 {
-    if (!g_pShardMainProcess)
+    if (!g_pMainProcess)
         BSAssertFail();
     CTask* pOwner = MainProcess_GetJobOwnerTask();
     if (!pOwner)
@@ -310,7 +310,7 @@ bool AQ_CharDataEditor2::Execute()
     int anReturn[2] = { 0, 0 };
     if (!g_pShardDB)
         BSAssertFail();
-    int nResult = CDatabase::ExecDirectWithReturnValue(ShardDB_GetSession(g_pShardDB), 5,
+    int nResult = CDatabase::ExecDirectWithReturnValue(g_pShardDB->GetSession(), 5,
                                                        m_strQuery.c_str(), 3, anReturn);
     return (nResult & ~1) == 0 && anReturn[0] >= 0;
 }
@@ -319,7 +319,7 @@ bool AQ_CharDataEditor2::OnComplete()
 {
     if (m_byType != AQ_RENAME_CHAR && m_byType != AQ_RENAME_GUILD)
         BSAssertFail();
-    if (!g_pShardMainProcess)
+    if (!g_pMainProcess)
         BSAssertFail();
     ShardIntegrate_OnQueryResult(this, TRUE);
     return true;
@@ -329,7 +329,7 @@ bool AQ_CharDataEditor2::OnFail()
 {
     if (m_byType != AQ_RENAME_CHAR && m_byType != AQ_RENAME_GUILD)
         BSAssertFail();
-    if (!g_pShardMainProcess)
+    if (!g_pMainProcess)
         BSAssertFail();
     ShardIntegrate_OnQueryResult(this, FALSE);
     return true;

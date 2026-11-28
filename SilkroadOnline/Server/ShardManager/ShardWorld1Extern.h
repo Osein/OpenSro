@@ -42,8 +42,6 @@ DWORD MainProcess_GetBodySession(WORD wBodyID);
 // MeterRateConfig_GetStatic (0x41b9b0): the two meter rate thresholds in hours
 // (HourForMeterRateLevel).
 const BYTE* MeterRateConfig_GetStatic();
-// DB_AddLogChar (0x412310)
-void DB_AddLogChar(int nCharID, int nJID, int nParam, BYTE byEventID, int nData);
 
 // ---------------------------------------------------------------------------------------------
 // Provided by SM_main3 (CUser)

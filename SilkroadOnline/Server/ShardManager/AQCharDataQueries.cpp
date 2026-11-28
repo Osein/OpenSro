@@ -40,7 +40,7 @@ CDBTable* GetTable(DWORD nIndex)
 {
     if (!g_pShardDB)
         BSAssertFail();
-    return ShardDB_GetTable(g_pShardDB, nIndex);
+    return g_pShardDB->GetTable(nIndex);
 }
 
 } // namespace
@@ -97,7 +97,7 @@ bool AQ_CharDataSelector::QueryCharInfo()
     if (!pCharTable->SelectWhere(szClause, 4, &listChar, 1) || !listChar.size())
     {
         m_byResult = AQ_RESULT_NO_ROW;
-        DB_FreeRecordList(&listChar, pCharTable);
+        CDBObjectList_DetachAndClear(&listChar, pCharTable);
         return false;
     }
     if (listChar.size() != 1)
@@ -130,7 +130,7 @@ bool AQ_CharDataSelector::QueryCharInfo()
     if (!pTrijobTable->SelectWhere(szClause, 1, &listTrijob, 0) || !listTrijob.size())
     {
         m_byResult = AQ_RESULT_NO_ROW;
-        DB_FreeRecordList(&listTrijob, pTrijobTable);
+        CDBObjectList_DetachAndClear(&listTrijob, pTrijobTable);
         return false;
     }
     if (listTrijob.size() != 1)
@@ -265,8 +265,8 @@ bool AQ_CharDataSelector::QueryItems()
     BYTE byCount = (BYTE)listItems.size();
     m_pResponse->Write(&byCount, 1);
     AQ_CharDataSelector_WriteItemList(&listItems, m_pResponse, &listSlots);
-    DB_FreeRecordList(&listSlots, pSlotTable);
-    DB_FreeRecordList(&listItems, GetTable(SHARD_TABLE_ITEMS));
+    CDBObjectList_DetachAndClear(&listSlots, pSlotTable);
+    CDBObjectList_DetachAndClear(&listItems, GetTable(SHARD_TABLE_ITEMS));
     return true;
 }
 
@@ -322,8 +322,8 @@ bool AQ_CharDataSelector::QuerySkills()
     pMsg->Write(&wSkills, 2);
     pMsg->Write(&byMasteries, 1);
     AQ_CharDataSelector_WriteSkills(m_pResponse, &listSkills, &listMasteries);
-    DB_FreeRecordList(&listSkills, pSkillTable);
-    DB_FreeRecordList(&listMasteries, pMasteryTable);
+    CDBObjectList_DetachAndClear(&listSkills, pSkillTable);
+    CDBObjectList_DetachAndClear(&listMasteries, pMasteryTable);
     return true;
 }
 
@@ -357,7 +357,7 @@ bool AQ_CharDataSelector::QueryQuests()
     if (!pTable->SelectWhere(szClause, 4, &listQuests, 1) || !listQuests.size())
     {
         m_byResult = AQ_RESULT_NO_ROW;
-        DB_FreeRecordList(&listQuests, pTable);
+        CDBObjectList_DetachAndClear(&listQuests, pTable);
         return false;
     }
     CMassiveMsg* pMsg = m_pResponse;
@@ -380,7 +380,7 @@ bool AQ_CharDataSelector::QueryQuests()
         m_pResponse->WriteString(strStart.c_str());
         m_pResponse->WriteString(strEnd.c_str());
     }
-    DB_FreeRecordList(&listQuests, pTable);
+    CDBObjectList_DetachAndClear(&listQuests, pTable);
     return true;
 }
 
@@ -403,7 +403,7 @@ bool AQ_CharDataSelector::QueryItemDetail()
 {
     if (!g_pShardDB)
         BSAssertFail();
-    CDBTable* pTable = ShardDB_GetTable(g_pShardDB, SHARD_TABLE_BINDING_OPTION);
+    CDBTable* pTable = g_pShardDB->GetTable(SHARD_TABLE_BINDING_OPTION);
     CDBRecordList listRows;
     m_byResult = AQ_DB_LoadByItemDBID(m_qwItemSerial, &listRows);
     if (m_byResult != AQ_RESULT_OK)
@@ -415,7 +415,7 @@ bool AQ_CharDataSelector::QueryItemDetail()
     pMsg->Write(&m_byQueryTarget, 1);
     pMsg->Write(&wCount, 2);
     AQ_CharDataSelector_WriteItemDetailRows(m_pResponse, &listRows);
-    DB_FreeRecordList(&listRows, pTable);
+    CDBObjectList_DetachAndClear(&listRows, pTable);
     return true;
 }
 
@@ -434,7 +434,7 @@ BYTE AQ_CharDataSelector::LoadByItemDBID(CDBRecordList* pList)
     }
     if (!pTable->SelectWhere(szClause, 4, pList, 1))
     {
-        DB_FreeRecordList(pList, pTable);
+        CDBObjectList_DetachAndClear(pList, pTable);
         return 7;
     }
     return 1;
@@ -494,7 +494,7 @@ bool AQ_CharDataSelector::QueryCollectionBook()
     if (!pTable->SelectWhere(szClause, 4, &listRows, 1))
     {
         m_byResult = AQ_RESULT_NO_ROW;
-        DB_FreeRecordList(&listRows, pTable);
+        CDBObjectList_DetachAndClear(&listRows, pTable);
         return false;
     }
     CMassiveMsg* pMsg = m_pResponse;
@@ -513,7 +513,7 @@ bool AQ_CharDataSelector::QueryCollectionBook()
         GM_FormatTimestamp(&strDate, &pRow->RegDate);
         WriteText(m_pResponse, strDate.c_str());
     }
-    DB_FreeRecordList(&listRows, pTable);
+    CDBObjectList_DetachAndClear(&listRows, pTable);
     return true;
 }
 
@@ -547,7 +547,7 @@ bool AQ_CharDataSelector::QueryOpenMarketByChar()
 {
     if (!g_pShardDB)
         BSAssertFail();
-    CDBTable* pTable = ShardDB_GetTable(g_pShardDB, SHARD_TABLE_OPEN_MARKET);
+    CDBTable* pTable = g_pShardDB->GetTable(SHARD_TABLE_OPEN_MARKET);
     CDBRecordList listRows;
     m_byResult = AQ_DB_LoadOpenMarket(&listRows, m_strName);
     if (m_byResult != AQ_RESULT_OK)
@@ -559,7 +559,7 @@ bool AQ_CharDataSelector::QueryOpenMarketByChar()
     pMsg->Write(&m_byQueryTarget, 1);
     pMsg->Write(&dwCount, 4);
     AQ_CharDataSelector_WriteOpenMarketRows(m_pResponse, &listRows);
-    DB_FreeRecordList(&listRows, pTable);
+    CDBObjectList_DetachAndClear(&listRows, pTable);
     return true;
 }
 
@@ -567,7 +567,7 @@ bool AQ_CharDataSelector::QueryOpenMarketByDate()
 {
     if (!g_pShardDB)
         BSAssertFail();
-    CDBTable* pTable = ShardDB_GetTable(g_pShardDB, SHARD_TABLE_OPEN_MARKET);
+    CDBTable* pTable = g_pShardDB->GetTable(SHARD_TABLE_OPEN_MARKET);
     CDBRecordList listRows;
     char szQuery[0xC00];
     memset(szQuery, 0, sizeof(szQuery));
@@ -598,7 +598,7 @@ bool AQ_CharDataSelector::QueryOpenMarketByDate()
     strQuery.assign(szQuery, strlen(szQuery));
     if (!pTable->SelectCustom(strQuery, 4, &listRows, 0))
     {
-        DB_FreeRecordList(&listRows, pTable);
+        CDBObjectList_DetachAndClear(&listRows, pTable);
         return false;
     }
     CMassiveMsg* pMsg = m_pResponse;
@@ -608,7 +608,7 @@ bool AQ_CharDataSelector::QueryOpenMarketByDate()
     pMsg->Write(&m_byQueryTarget, 1);
     pMsg->Write(&dwCount, 4);
     AQ_CharDataSelector_WriteOpenMarketRows(m_pResponse, &listRows);
-    DB_FreeRecordList(&listRows, pTable);
+    CDBObjectList_DetachAndClear(&listRows, pTable);
     return true;
 }
 
@@ -905,7 +905,7 @@ void AQ_CharDataSelector_WriteGuildInfo(CDBRecordList* pGuilds, CDBRecordList* p
             WriteText(pMsg, strDate.c_str());
             pMsg->Write(&pAlly->GatheredSP, 4);
         }
-        DB_FreeRecordList(&listAllies, pGuildTable);
+        CDBObjectList_DetachAndClear(&listAllies, pGuildTable);
     }
 }
 
@@ -1043,7 +1043,7 @@ BOOL AQ_CharDataSelector::LoadPetItem(CDBRecordList* pItems, CDBRecordList* pCOS
     {
         BSAssertFail();
         // BUG(SM-353): the pet list is freed through the missing (NULL) table.
-        DB_FreeRecordList(pCOS, NULL);
+        CDBObjectList_DetachAndClear(pCOS, NULL);
         return FALSE;
     }
 
@@ -1061,22 +1061,22 @@ BOOL AQ_CharDataSelector::LoadPetItem(CDBRecordList* pItems, CDBRecordList* pCOS
         if (StringCchPrintfA(szClause, 0xC00, "WHERE ID = %d", pItem->Data) != S_OK)
         {
             BSAssertFail();
-            DB_FreeRecordList(pCOS, pCOSTable);
+            CDBObjectList_DetachAndClear(pCOS, pCOSTable);
             return FALSE;
         }
         if (!pCOSTable->SelectWhere(szClause, 4, &listRow, 0))
         {
             BSAssertFail();
-            DB_FreeRecordList(pCOS, pCOSTable);
-            DB_FreeRecordList(&listRow, pCOSTable);
+            CDBObjectList_DetachAndClear(pCOS, pCOSTable);
+            CDBObjectList_DetachAndClear(&listRow, pCOSTable);
             return FALSE;
         }
         if (listRow.size() != 1)
             BSAssertFail();
         if (!listRow.size())
         {
-            DB_FreeRecordList(pCOS, pCOSTable);
-            DB_FreeRecordList(&listRow, pCOSTable);
+            CDBObjectList_DetachAndClear(pCOS, pCOSTable);
+            CDBObjectList_DetachAndClear(&listRow, pCOSTable);
             return FALSE;
         }
         pCOS->push_back(listRow.front());
@@ -1115,7 +1115,7 @@ bool AQ_CharDataSelector::QueryPetDetail()
         if (!pSlotTable->SelectCustom(strSlotQuery, 4, &listSlots, 0))
         {
             LogPrintf(0x1000000, "Pet Detail Information Inventory ItemSlot Query Failed!!");
-            DB_FreeRecordList(&listSlots, pSlotTable);
+            CDBObjectList_DetachAndClear(&listSlots, pSlotTable);
             return false;
         }
         CDBRecordList listItems;
@@ -1133,9 +1133,9 @@ bool AQ_CharDataSelector::QueryPetDetail()
             if (!pItemTable->SelectCustom(strItemQuery, 1, &listItems, 0))
             {
                 LogPrintf(0x1000000, "Pet Detail Information Item Query Failed!!");
-                DB_FreeRecordList(&listSlots, pSlotTable);
+                CDBObjectList_DetachAndClear(&listSlots, pSlotTable);
                 if (listItems.size())
-                    DB_FreeRecordList(&listItems, pItemTable);
+                    CDBObjectList_DetachAndClear(&listItems, pItemTable);
                 return false;
             }
         }
@@ -1145,8 +1145,8 @@ bool AQ_CharDataSelector::QueryPetDetail()
         BYTE byCount = (BYTE)listItems.size();
         m_pResponse->Write(&byCount, 1);
         AQ_CharDataSelector_WriteItemList(&listItems, m_pResponse, &listSlots);
-        DB_FreeRecordList(&listSlots, pSlotTable);
-        DB_FreeRecordList(&listItems, pItemTable);
+        CDBObjectList_DetachAndClear(&listSlots, pSlotTable);
+        CDBObjectList_DetachAndClear(&listItems, pItemTable);
         return true;
     }
     if (m_byQueryTarget != 9)
@@ -1169,7 +1169,7 @@ bool AQ_CharDataSelector::QueryPetDetail()
     std::string strQuery(szQuery);
     if (!pCOSTable->SelectCustom(strQuery, 4, &listCOS, 0))
     {
-        DB_FreeRecordList(&listCOS, pCOSTable);
+        CDBObjectList_DetachAndClear(&listCOS, pCOSTable);
         return false;
     }
     if (listCOS.size() > 1)
@@ -1194,7 +1194,7 @@ bool AQ_CharDataSelector::QueryPetDetail()
     if (!pItemTable->SelectCustom(strQuery, 4, &listInventory, 0))
     {
         if (listInventory.size())
-            DB_FreeRecordList(&listInventory, pItemTable);
+            CDBObjectList_DetachAndClear(&listInventory, pItemTable);
         return false;
     }
     if (StringCchPrintfA(szQuery, 0xC00,
@@ -1210,15 +1210,15 @@ bool AQ_CharDataSelector::QueryPetDetail()
     if (!pItemTable->SelectCustom(strQuery, 4, &listChest, 0))
     {
         if (listChest.size())
-            DB_FreeRecordList(&listChest, pItemTable);
+            CDBObjectList_DetachAndClear(&listChest, pItemTable);
         return false;
     }
     if (!LoadPetItem(&listInventory, &listCOS, &wInventoryCount) ||
         !LoadPetItem(&listChest, &listCOS, &wChestCount))
     {
-        DB_FreeRecordList(&listCOS, pCOSTable);
-        DB_FreeRecordList(&listInventory, pItemTable);
-        DB_FreeRecordList(&listChest, pItemTable);
+        CDBObjectList_DetachAndClear(&listCOS, pCOSTable);
+        CDBObjectList_DetachAndClear(&listInventory, pItemTable);
+        CDBObjectList_DetachAndClear(&listChest, pItemTable);
         return false;
     }
 
@@ -1247,8 +1247,8 @@ bool AQ_CharDataSelector::QueryPetDetail()
         pMsg->Write(&pPet->HGP, 2);
         pMsg->WriteString(strRentEnd.c_str());
     }
-    DB_FreeRecordList(&listCOS, pCOSTable);
-    DB_FreeRecordList(&listInventory, pItemTable);
-    DB_FreeRecordList(&listChest, pItemTable);
+    CDBObjectList_DetachAndClear(&listCOS, pCOSTable);
+    CDBObjectList_DetachAndClear(&listInventory, pItemTable);
+    CDBObjectList_DetachAndClear(&listChest, pItemTable);
     return true;
 }

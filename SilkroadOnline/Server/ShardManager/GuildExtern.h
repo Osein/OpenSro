@@ -25,11 +25,6 @@ enum
 };
 
 // ---------------------------------------------------------------------------------------------
-// Provided by SM_main [SM_social2]: CharName_IsValid (0x40f200), the name filter of the main
-// process (g_pMainProcess is asserted before the call).
-BOOL CharName_IsValid(const std::string& strName);
-
-// ---------------------------------------------------------------------------------------------
 // Provided by the transaction group [SM_social2]: the guild job of the hostile guild request
 // (trs_guild_job, pool 0x4204b0); COverlappedJobMgr::StartJob runs it.
 class trs_guild_job : public transaction

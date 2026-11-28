@@ -53,7 +53,7 @@ bool AQ_CharDataSelector::ReadRequest(CMsg* pMsg, DWORD dwRelayID)
     std::string strFound;
     if (!g_pShardDB)
         BSAssertFail();
-    if (ShardDB_CheckSqlInjection(g_pShardDB, m_strName, strFound) == 1)
+    if (g_pShardDB->CheckSqlInjection(m_strName, strFound) == 1)
     {
         m_byResult = AQ_RESULT_INJECTION;
         return false;

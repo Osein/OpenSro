@@ -39,7 +39,7 @@ void AQ_Base::ReleaseId()
 
 bool AQ_Base::ReadRequest(CMsg* pMsg, DWORD dwRelayID)
 {
-    if (!g_pShardMainProcess)
+    if (!g_pMainProcess)
         BSAssertFail();
     CTask* pOwner = MainProcess_GetJobOwnerTask();
     if (!pOwner)
@@ -81,9 +81,9 @@ bool AQ_Base::OnComplete()
         BSAssertFail();
         return true;
     }
-    if (!g_pShardMainProcess)
+    if (!g_pMainProcess)
         BSAssertFail();
-    g_pShardMainProcess->SendRelayReplyMassive(m_dwSessionID, m_dwRelayID, m_pResponse);
+    g_pMainProcess->SendRelayReplyMassive(m_dwSessionID, m_dwRelayID, m_pResponse);
     m_pResponse = NULL;
     return true;
 }
@@ -99,9 +99,9 @@ bool AQ_Base::OnFail()
     BYTE byFailed = 2;
     pResponse->Write(&byFailed, 1);
     pResponse->Write(&m_byResult, 1);
-    if (!g_pShardMainProcess)
+    if (!g_pMainProcess)
         BSAssertFail();
-    g_pShardMainProcess->SendRelayReplyMassive(m_dwSessionID, m_dwRelayID, m_pResponse);
+    g_pMainProcess->SendRelayReplyMassive(m_dwSessionID, m_dwRelayID, m_pResponse);
     m_pResponse = NULL;
     return true;
 }
@@ -120,7 +120,7 @@ void AQ_DBQuery::Setup(ServerFramework::CTrigger* pTrigger, int nSession)
     memset(this, 0, sizeof(*this));
     if (!g_pShardDB)
         BSAssertFail();
-    m_pSession = ShardDB_GetSession(g_pShardDB);
+    m_pSession = g_pShardDB->GetSession();
     m_pTrigger = pTrigger;
     m_nSession = nSession;
     m_bNoRow = 1;

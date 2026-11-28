@@ -52,7 +52,7 @@ void DeletedCharEntry::ReleaseRecord()
         if (!g_pShardDB)
             BSAssertFail();
         CInstanceDeletedChar* pRec = pRecord;
-        ShardDB_GetTable(g_pShardDB, SHARD_TABLE_DELETED_CHAR)->FreeRecord(pRec);
+        g_pShardDB->GetTable(SHARD_TABLE_DELETED_CHAR)->FreeRecord(pRec);
     }
     pRecord = NULL;
 }
@@ -152,7 +152,7 @@ void CShardMaintainer::LoadDeletedChars()
 {
     if (!g_pShardDB)
         BSAssertFail();
-    CDBTable* pTable = ShardDB_GetTable(g_pShardDB, SHARD_TABLE_DELETED_CHAR);
+    CDBTable* pTable = g_pShardDB->GetTable(SHARD_TABLE_DELETED_CHAR);
     if (!pTable)
     {
         BSAssertFail();
@@ -292,7 +292,7 @@ int CShardMaintainer::DeleteCharPermanently(int* pnErrorCode, DeletedCharEntry* 
     int anReturn[2] = { 0, 0 };
     if (!g_pShardDB)
         BSAssertFail();
-    int nResult = CDatabase::ExecDirectWithReturnValue(ShardDB_GetSession(g_pShardDB), 2,
+    int nResult = CDatabase::ExecDirectWithReturnValue(g_pShardDB->GetSession(), 2,
                                                        szQuery, 3, anReturn);
     if (nResult & ~1)
         return 0;
@@ -315,9 +315,9 @@ int CShardMaintainer::DeleteCharPermanently(int* pnErrorCode, DeletedCharEntry* 
 
 void CShardMaintainer::SendCharDeletedNotify(DeletedCharEntry* pEntry, int nErrorCode)
 {
-    if (!g_pShardMainProcess)
+    if (!g_pMainProcess)
         BSAssertFail();
-    CTask* pTask = (CTask*)g_pShardMainProcess->GetOwner();
+    CTask* pTask = (CTask*)g_pMainProcess->GetOwner();
     if (!pTask)
         return;
 
@@ -357,7 +357,7 @@ void CShardMaintainer::OnReviveChar(CMsg* pMsg)
     int nReturn = 0;
     if (!g_pShardDB)
         BSAssertFail();
-    int nResult = CDatabase::ExecDirectWithReturnValue(ShardDB_GetSession(g_pShardDB), 2,
+    int nResult = CDatabase::ExecDirectWithReturnValue(g_pShardDB->GetSession(), 2,
                                                        szQuery, 3, &nReturn);
     // BUG(SM-302): a failed statement leaves the code at "restored".
     if ((nResult & ~1) == 0)
@@ -378,9 +378,9 @@ void CShardMaintainer::OnReviveChar(CMsg* pMsg)
         }
     }
 
-    if (!g_pShardMainProcess)
+    if (!g_pMainProcess)
         BSAssertFail();
-    CTask* pTask = (CTask*)g_pShardMainProcess->GetOwner();
+    CTask* pTask = (CTask*)g_pMainProcess->GetOwner();
     if (!pTask)
         return;
 

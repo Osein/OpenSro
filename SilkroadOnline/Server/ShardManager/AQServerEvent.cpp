@@ -71,7 +71,7 @@ int ExecServerEventCall(const std::string& strQuery, __int64* pnValue)
     *pnValue = 0;
     if (!g_pShardDB)
         BSAssertFail();
-    return CDatabase::ExecDirectWithReturnValue(ShardDB_GetSession(g_pShardDB), 0,
+    return CDatabase::ExecDirectWithReturnValue(g_pShardDB->GetSession(), 0,
                                                 strQuery.c_str(),
                                                 DBEXEC_RETURN_INT | DBEXEC_RETURN_BIGINT,
                                                 pnValue);
@@ -253,7 +253,7 @@ bool AQ_ServerEventLog::Execute()
         AQ_WriteString(m_pResponse, m_strDesc);
         if (!g_pShardDB)
             BSAssertFail();
-        CDBTable* pTable = ShardDB_GetTable(g_pShardDB, SHARD_TABLE_LOG_SERVER_EVENT);
+        CDBTable* pTable = g_pShardDB->GetTable(SHARD_TABLE_LOG_SERVER_EVENT);
         if (!pTable)
         {
             BSAssertFail();
@@ -281,7 +281,7 @@ bool AQ_ServerEventLog::Execute()
         if (!g_pShardDB)
             BSAssertFail();
         // The mode value is also the connection index.
-        int nResult = CDatabase::ExecDirectWithReturnValue(ShardDB_GetLogSession(g_pShardDB),
+        int nResult = CDatabase::ExecDirectWithReturnValue(g_pShardDB->GetLogSession(),
                                                            m_nMode, m_strQuery.c_str(), 0, NULL);
         if ((nResult & ~1) == 0)
             return true;
@@ -369,7 +369,7 @@ int RewardField(CInstanceServerEventReward* pRecord, int CInstanceServerEventRew
 // COverlapJob::Init with the job owner task of the main process (both asserted).
 void InitServerEventJob(AQ_ServerEvent* pJob)
 {
-    if (!g_pShardMainProcess)
+    if (!g_pMainProcess)
         BSAssertFail();
     CTask* pOwner = MainProcess_GetJobOwnerTask();
     if (!pOwner)
@@ -517,7 +517,7 @@ BOOL AQ_ServerEvent::BuildUpdateRewardQuery()
 BOOL DB_Insert_LogServerEvent(const std::string& strDesc, BYTE byType, AQ_ServerEventLog* pJob,
                               DWORD dwEventID)
 {
-    if (!g_pShardMainProcess)
+    if (!g_pMainProcess)
         BSAssertFail();
     CTask* pOwner = MainProcess_GetJobOwnerTask();
     if (!pOwner)
@@ -544,11 +544,11 @@ bool AQ_ServerEventLog_HandleRequest(CMsg* pMsg, DWORD dwRelayID)
     AQ_ServerEventLog* pJob = AQ_ServerEventLog::Alloc();
     if (pJob->ReadRequest(pMsg, dwRelayID))
     {
-        if (!g_pShardMainProcess)
+        if (!g_pMainProcess)
             BSAssertFail();
-        if (!g_pShardMainProcess)
+        if (!g_pMainProcess)
             BSAssertFail();
-        return g_pShardMainProcess->SendOverlapJob(pJob, MainProcess_GetDBJobTask());
+        return g_pMainProcess->SendOverlapJob(pJob, MainProcess_GetDBJobTask());
     }
     pJob->OnInitFailed(AQ_OPCODE_SERVER_EVENT_LOG);
     pJob->ReturnToPool();
