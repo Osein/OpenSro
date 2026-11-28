@@ -6,6 +6,7 @@
 
 #include "BSLib/thread/Task.h"
 #include "BSNet/NetEngine.h"
+#include "ServerFramework/ServerBody.h"
 #include "ServerFramework/ServerDataExtern.h"
 #include "ServerFramework/SimpleFTP.h"
 #include "ShardManager/GuildExtern.h"
@@ -146,14 +147,15 @@ void CCrestUploader::OnMsg_380E(CMsg* pMsg, DWORD, DWORD, CMassiveMsg*)
     DWORD dw4 = pMsg->ReadForwardOnly<DWORD>();
     CREST_DATA crest;
     *pMsg >> crest;
-    if (!g_pShardSelfInfo)
+    // The shard ID of the body of this server (g_pSelfBody 0x8588B4).
+    if (!g_pSelfBody)
         BSAssertFail();
     char szFileName[MAX_PATH];
     memset(szFileName, 0, sizeof(szFileName));
     BYTE bResult;
     if (StringCchPrintfA(szFileName, MAX_PATH, "%c%u_%u_%u.crb",
                          wType != CREST_TYPE_ALLIANCE ? 'G' : 'A',
-                         g_pShardSelfInfo->wShardID, dw3, dw4))
+                         g_pSelfBody->wShardID, dw3, dw4))
     {
         BSAssertFail();
         bResult = 2;

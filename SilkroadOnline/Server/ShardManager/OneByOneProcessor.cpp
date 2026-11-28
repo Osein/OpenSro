@@ -3,6 +3,7 @@
 #include "BSLib/BSDebug.h"
 #include "BSNet/IBSNet.h"
 #include "BSNet/QueMT.h"
+#include "ServerFramework/ServerBody.h"
 #include "ServerFramework/ServerDataExtern.h"
 #include "ServerFramework/ServerFramework.h"
 #include "ShardManager/ShardAdminFwd.h"
@@ -181,8 +182,9 @@ void COneByOneProcessor::StartSilkQuery_631A(JOB_DATA* pJob)
     pMsg->SetOpcode(SILK_HISTORY_QUERY);
     DWORD dwOne = 1;
     pMsg->WriteBytes(&dwOne, 4);
-    WORD wShardID = Cert_GetOwnShardID();
-    pMsg->WriteBytes(&wShardID, 2);
+    // The body ID of this server (the first WORD of g_pSelfBody 0x8588B4; the GlobalManager
+    // answers to that body).
+    pMsg->WriteBytes(&g_pSelfBody->wID, 2);
     sSilkHistoryData_Write(pJob->m_pParam, pMsg);
 
     // BUG(SM-305): in the divisions of group 3 the request is neither sent nor released.
@@ -192,7 +194,7 @@ void COneByOneProcessor::StartSilkQuery_631A(JOB_DATA* pJob)
     if (!g_pShardMainProcess)
         BSAssertFail();
     if (ServerFramework::RelayMsgToBody_6008(g_pShardMainProcess, pMsg,
-                                             Cert_GetGlobalManagerBodyID(), 0, 0,
+                                             g_pSelfBody->pDivision->wGlobalManagerID, 0, 0,
                                              (DWORD)pJob))
     {
         return;

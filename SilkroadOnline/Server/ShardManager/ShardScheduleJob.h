@@ -23,13 +23,6 @@ class GameWorldLayer;
 //
 // The flag world jobs run in FlagWorld.cpp, the battle arena jobs in BattleArena.cpp.
 
-// ---------------------------------------------------------------------------------------------
-// Provided by SM_main
-
-// dword_8588B4 (SM_main): the server ID WORD of this module (the body of this server), NULL
-// before it is known.
-extern WORD* g_pwShardServerID;
-
 // An entry of the open list (8 bytes): a notice (bOpen 0) or the opening (1) at dwTime.
 struct sTempleOpenTime
 {

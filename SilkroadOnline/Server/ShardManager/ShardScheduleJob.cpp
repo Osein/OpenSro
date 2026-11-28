@@ -3,6 +3,7 @@
 #include "BSLib/BSDebug.h"
 #include "BSNet/Msg.h"
 #include "BSNet/NetEngine.h"
+#include "ServerFramework/ServerBody.h"
 #include "ServerFramework/ServerDataExtern.h"
 #include "ServerCommon/ReferenceData.h"
 #include "ShardManager/GameWorld.h"
@@ -61,7 +62,8 @@ void IShard_ScheduleJob::LogScheduleRow()
     const char* pszState = "Start";
     if (m_Info.bBegin != 1)
         pszState = "End";
-    int nServerID = g_pwShardServerID ? *g_pwShardServerID : -1;
+    // The body ID of this server (g_pSelfBody 0x8588B4), -1 before it is known.
+    int nServerID = g_pSelfBody ? g_pSelfBody->wID : -1;
     Schedule_InsertLogAsync(std::string("SR_ShardManager"), nServerID, m_Info.strDefine,
                             m_Info.dwScheduleID, std::string(pszState));
 }

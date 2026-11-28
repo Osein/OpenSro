@@ -3,6 +3,7 @@
 #include <strsafe.h>
 
 #include "BSLib/BSDebug.h"
+#include "ServerFramework/ServerBody.h"
 #include "ServerFramework/ServerDataExtern.h"
 #include "ServerFramework/Trigger.h"
 #include "ShardManager/ShardAdminFwd.h"
@@ -416,6 +417,6 @@ void AQ_UserDataSelector::WriteRowHeader(CMassiveMsg* pMsg)
     BYTE byRow = 1;
     pMsg->Write(&byRow, 1);
     pMsg->Write(&m_byQueryTarget, 1);
-    WORD wShardID = Cert_GetOwnShardID();
-    m_pResponse->Write(&wShardID, 2);
+    // The shard ID of the body of this server (g_pSelfBody 0x8588B4).
+    m_pResponse->Write(&g_pSelfBody->pShard->wID, 2);
 }

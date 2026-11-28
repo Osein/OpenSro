@@ -134,7 +134,8 @@ void CShard_ScheduleManager::DumpSchedules()
 
 BOOL CShard_ScheduleManager::IsServerBodyReady()
 {
-    SERVER_BODY* pBody = Shard_GetServerBodyOfMyself();
+    // g_pSelfBody (0x8588B4) is g_pServerBodyOfMyself of the log.
+    SERVER_BODY* pBody = g_pSelfBody;
     if (!pBody)
     {
         LogPrintf(0x2000001, "Schedule Manager : g_pServerBodyOfMyself is NULL !!");

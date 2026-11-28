@@ -424,7 +424,7 @@ bool CClientManager::SerializeUserList(ServerFramework::CMassiveMsg* pMsg)
     WORD wCount = (WORD)m_hmapUserByJID.size();
     if (!wCount)
         return false;
-    pMsg->Write(Shard_GetServerBodyOfMyself()->pShard, 2);
+    pMsg->Write(&g_pSelfBody->pShard->wID, 2);
     pMsg->Write(&wCount, 2);
     for (stdext::hash_map<DWORD, CUser*>::iterator it = m_hmapUserByJID.begin();
          it != m_hmapUserByJID.end(); ++it)

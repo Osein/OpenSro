@@ -18,10 +18,6 @@ class CMsg;
 // Provided by SM_main (CMainProcess, g_pMainProcess, the siege schedule state):
 // ShardWorldExtern.h.
 
-// Provided by the certification group (0x8588B4, g_pServerBodyOfMyself in the logs): the body of
-// this server (wID, nState).
-SERVER_BODY* Shard_GetServerBodyOfMyself();
-
 // Provided by SM_main (DB_SiegeFortressStatusUpdateForWeb): writes the fortress state of the
 // siege fortress manager (SiegeFortress.h) for the web page.
 class CSiegeFortressMgr;

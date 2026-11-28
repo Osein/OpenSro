@@ -4,6 +4,8 @@
 
 #include "BSLib/BSDebug.h"
 #include "BSLib/DB/DBQuery.h"
+#include "ServerFramework/CertArch.h"
+#include "ServerFramework/ServerBody.h"
 #include "ServerFramework/ServerDataExtern.h"
 #include "ShardManager/ShardAdminFwd.h"
 
@@ -349,23 +351,23 @@ bool CharDataEditor_CheckGameServersStopped(CBaseCharDataEditor* pEditor)
     if (!CharDataEditor_CheckCharMgrReady(pEditor))
         return false;
 
-    SHARD_SERVER_STATE* pOwn = Cert_GetOwnServerState();
-    if (pOwn->dwState != 4)
+    // The body of this server (g_pSelfBody 0x8588B4) and every body (GetGlobal_8588D0).
+    if (g_pSelfBody->nState != 4)
     {
         pEditor->m_byResult = 15;
         return false;
     }
 
-    ShardServerStateList* pList = Cert_GetServerStateList();
-    for (ShardServerStateList::iterator it = pList->begin(); it != pList->end(); ++it)
+    ServerBodyList* pList = g_pServerBodyList;
+    for (ServerBodyList::iterator it = pList->begin(); it != pList->end(); ++it)
     {
-        SHARD_SERVER_STATE* pState = *it;
-        if (pState == pOwn)
+        SERVER_BODY* pBody = *it;
+        if (pBody == g_pSelfBody)
             continue;
-        if (pState->dwModuleID != Cert_FindModuleIDByName("SR_GameServer"))
+        if (pBody->pModule != CertModule_FindByName("SR_GameServer"))
             continue;
-        DWORD dwState = pState->dwState;
-        if (dwState && dwState != 4 && dwState != 5)
+        int nState = pBody->nState;
+        if (nState && nState != 4 && nState != 5)
         {
             pEditor->m_byResult = 15;
             return false;

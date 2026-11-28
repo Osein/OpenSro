@@ -40,30 +40,11 @@ void DB_AddLogChar(int nCharID, int nJID, int nParam, BYTE byEventID, int nData)
 // Provided by the character manager group (0x85884C): non-zero once the character data is
 // loaded (+200).
 BOOL CharMgr_IsReady();
-// Provided by the certification group (GetGlobal_8588D0 / CertModule_FindByName): the server
-// state rows of the shard, by module name.
-struct SHARD_SERVER_STATE
-{
-    DWORD   dwReserved[4];
-    DWORD   dwState;        // +10  4 / 5: stopped
-    DWORD   dwModuleID;     // +14
-};
-typedef std::list<SHARD_SERVER_STATE*> ShardServerStateList;
-ShardServerStateList* Cert_GetServerStateList();
-// The row of this server (pExceptionObject in the analysis).
-SHARD_SERVER_STATE* Cert_GetOwnServerState();
-DWORD Cert_FindModuleIDByName(const char* pszModule);
 
 // Provided by the shard integration part of the main process (ShardIntegrate_OnQueryResult,
 // 0xB450 answer): result of a rename job (bSucceeded 1 from OnComplete, 0 from OnFail).
 class AQ_CharDataEditor2;
 void ShardIntegrate_OnQueryResult(AQ_CharDataEditor2* pJob, BOOL bSucceeded);
-
-// Provided by the certification group (the own server record, 0x8588B4): its first WORD (the
-// shard ID) and the body ID at +0x121 of the record at +0x1C (the GlobalManager the silk
-// queries are relayed to).
-WORD Cert_GetOwnShardID();
-WORD Cert_GetGlobalManagerBodyID();
 
 // Provided by the shard DB group (CDBObjectList_DetachAndClear, 0x40a7e0): every record of
 // *pList goes back to pTable (CDBTable::FreeRecord), then the list is cleared.

@@ -4,6 +4,7 @@
 #include <strsafe.h>
 
 #include "BSLib/BSDebug.h"
+#include "ServerFramework/ServerBody.h"
 #include "ServerFramework/ServerDataExtern.h"
 #include "ServerFramework/Trigger.h"
 #include "ServerFramework/ServerProcess.h"
@@ -1060,15 +1061,16 @@ bool CCharDataEditor::BuildReply()
         // GlobalManager.
         CMsg* pMsg = g_pBSNet->AllocMsg(FALSE);
         pMsg->SetOpcode(0x6210);
-        WORD wShardID = Cert_GetOwnShardID();
-        pMsg->WriteBytes(&wShardID, 2);
+        // The shard ID of the body of this server (g_pSelfBody 0x8588B4).
+        pMsg->WriteBytes(&g_pSelfBody->pShard->wID, 2);
         pMsg->WriteBytes(&m_dwJID, 4);
         *pMsg << m_strNewName;
         *pMsg << m_strOldName;
         if (!g_pShardMainProcess)
             BSAssertFail();
-        if (!ServerFramework::RelayMsgToBody_6008(g_pShardMainProcess, pMsg,
-                                                  Cert_GetGlobalManagerBodyID(), 0, 0, 0))
+        WORD wGlobalManagerID = g_pSelfBody->pDivision->wGlobalManagerID;
+        if (!ServerFramework::RelayMsgToBody_6008(g_pShardMainProcess, pMsg, wGlobalManagerID,
+                                                  0, 0, 0))
         {
             LogPrintf(0x2000001, "Failed To Change Character Name of WebDB[JID: %d, Old: %s, "
                       "New: %s]", m_dwJID, m_strOldName.c_str(), m_strNewName.c_str());
