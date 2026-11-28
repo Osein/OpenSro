@@ -113,9 +113,10 @@ public:
     virtual bool OnComplete();                                          // 7 (0x466d10)
     virtual bool OnFail();                                              // 8 (0x466d40)
 
-    // AQ_CharDataEditor2::Init (0x466ae0): the request and the statement text.
-    void Setup(const std::string& strNewName, CMsg* pMsg, DWORD dwParam, BYTE byType,
-               DWORD dwCharID, const std::string& strOldName);
+    // AQ_CharDataEditor2::Init (0x466ae0): the request and the statement text. TRUE when a
+    // statement was built (FALSE for an unknown type, asserted).
+    BOOL Init(const std::string& strNewName, CMsg* pMsg, DWORD dwParam, BYTE byType,
+              DWORD dwCharID, const std::string& strOldName);
 
 public:
     BYTE            m_byType;       // +20  AQ_RENAME_*, 0xFF none

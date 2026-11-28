@@ -265,15 +265,16 @@ void AQ_CharDataEditor2::ReleaseId()
     m_strQuery.clear();
 }
 
-void AQ_CharDataEditor2::Setup(const std::string& strNewName, CMsg* pMsg, DWORD dwParam,
-                               BYTE byType, DWORD dwCharID, const std::string& strOldName)
+BOOL AQ_CharDataEditor2::Init(const std::string& strNewName, CMsg* pMsg, DWORD dwParam,
+                              BYTE byType, DWORD dwCharID, const std::string& strOldName)
 {
     if (!g_pMainProcess)
         BSAssertFail();
     CTask* pOwner = MainProcess_GetJobOwnerTask();
     if (!pOwner)
         BSAssertFail();
-    Init(pOwner);
+    // COverlapJob::Init (0x6824d0), hidden by this Init.
+    ServerFramework::COverlapJob::Init(pOwner);
 
     m_dwParam = dwParam;
     m_byType = byType;
@@ -299,8 +300,10 @@ void AQ_CharDataEditor2::Setup(const std::string& strNewName, CMsg* pMsg, DWORD 
     {
         BSAssertFail();
     }
-    if (lstrlenA(szQuery))
-        m_strQuery.assign(szQuery, strlen(szQuery));
+    if (!lstrlenA(szQuery))
+        return FALSE;
+    m_strQuery.assign(szQuery, strlen(szQuery));
+    return TRUE;
 }
 
 bool AQ_CharDataEditor2::Execute()
