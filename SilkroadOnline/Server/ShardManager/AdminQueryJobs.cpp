@@ -121,6 +121,28 @@ bool AQ_AssociationReputation::Execute()
     return query.ExecuteFormat(m_strQuery.c_str()) >= 0;
 }
 
+BOOL DB_UpdateAssociationReputation(AQ_AssociationReputation* pJob, const int* pnAnubis,
+                                    const int* pnHaroeris)
+{
+    if (!g_pShardMainProcess)
+        BSAssertFail();
+    CTask* pOwner = MainProcess_GetJobOwnerTask();
+    if (!pOwner)
+        BSAssertFail();
+    pJob->Init(pOwner);
+    pJob->m_strQuery.clear();
+
+    char szQuery[0xC00];
+    if (StringCchPrintfA(szQuery, 0xC00, "exec _UpdateAssociationReputation %d, %d, %d, %d",
+                         pnAnubis[0], pnAnubis[1], pnHaroeris[0], pnHaroeris[1]) != S_OK)
+    {
+        BSAssertFail();
+        return FALSE;
+    }
+    pJob->m_strQuery.assign(szQuery, strlen(szQuery));
+    return TRUE;
+}
+
 // -------------------------------------------------------------------------------------------
 // AQ_CharDataEditor
 

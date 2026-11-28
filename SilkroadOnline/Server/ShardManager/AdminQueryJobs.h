@@ -63,6 +63,13 @@ public:
 C_ASSERT(FIELD_OFFSET(AQ_AssociationReputation, m_strQuery) == 0x50);
 C_ASSERT(sizeof(AQ_AssociationReputation) == 0x6C);
 
+// DB_UpdateAssociationReputation (0x465590, CAssociationReputationMgr::QueueDBUpdate): Init on
+// the job owner task of the main process and "exec _UpdateAssociationReputation %d, %d, %d, %d"
+// with the two pairs {hunter, robber} into m_strQuery. FALSE (asserted) when the text does not
+// fit.
+BOOL DB_UpdateAssociationReputation(AQ_AssociationReputation* pJob, const int* pnAnubis,
+                                    const int* pnHaroeris);
+
 // AQ_CharDataEditor (0x58 bytes): mode 0 selects character data (CCharDataSelector), mode 1
 // edits it (CCharDataEditor); the editor object does the work.
 class AQ_CharDataEditor : public CAQJobT<AQ_CharDataEditor>

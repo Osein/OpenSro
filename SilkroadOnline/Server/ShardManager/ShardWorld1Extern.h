@@ -25,11 +25,6 @@ class CMsg;
 // ---------------------------------------------------------------------------------------------
 // Provided by SM_main3 (the statement builders of the AQ jobs)
 
-// DB_UpdateAssociationReputation (0x465590): Init on the main task and
-// "exec _UpdateAssociationReputation %d, %d, %d, %d" with the two pairs. FALSE when the text
-// does not fit.
-BOOL DB_UpdateAssociationReputation(ServerFramework::COverlapJob* pJob, const int* pnAnubis,
-                                    const int* pnHaroeris);
 // DB_Insert_LogServerEvent (0x47b2b0): "INSERT _LogServerEvent VALUES( GetDate(), %d, %d,
 // '%s' )" with dwEventID, byType and strDesc.
 BOOL DB_Insert_LogServerEvent(const std::string& strDesc, BYTE byType,
