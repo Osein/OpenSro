@@ -100,3 +100,15 @@ NewSchedule::SCHEDULE_DATA* CopyScheduleRow(const NewSchedule::SCHEDULE_DATA* pS
 // (0x8A8924, asserted), NULL when there is no such guild; the name of a guild (0x4409a0).
 void* GuildManager_FindGuild(int nGuildID);
 void Guild_GetName(void* pGuild, std::string& strName);
+
+// Provided by the main process group: *(g_pShardMainProcess + 0x42308), the task of the DB jobs
+// (AQ_ServerEventLog requests).
+CTask* MainProcess_GetDBJobTask();
+
+// Provided by SM_world6 (ServerEvent.h): the record member (+4) of a server event / reward.
+class CServerEvent;
+class CServerEventReward;
+class CInstanceServerEvent;
+class CInstanceServerEventReward;
+CInstanceServerEvent* ServerEvent_GetRecord(CServerEvent* pEvent);
+CInstanceServerEventReward* ServerEventReward_GetRecord(CServerEventReward* pReward);

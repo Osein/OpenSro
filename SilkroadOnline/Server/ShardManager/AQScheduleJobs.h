@@ -206,8 +206,13 @@ public:
 
     int OnQueryRow(DWORD dwQuery, DWORD dwUnused);
 
+    // 0x473f30: owner task, session and relay ID (no AQ_Base header), then the schedules of
+    // the relayed list: {BYTE 1, row} each up to a BYTE other than 1. Always true.
+    bool ReadRequestList(ServerFramework::CMassiveMsg* pMsg, DWORD dwRelayID,
+                         DWORD dwSessionID);
+
 public:
-    DWORD                                   m_dw50;             // +50
+    DWORD                                   m_dw50;             // +50  session ID again
     std::list<AQ_STANDARD_SCHEDULE_ROW>     m_listSchedule;     // +54
 };
 

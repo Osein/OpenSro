@@ -6,6 +6,9 @@
 // AQ_ServerEvent (vftable 0x787940, 0x7C bytes): a change of a server event of the shard
 // (update, insert reward, delete or update reward). The owner fills the fields; the job has no
 // console answer (OnComplete / OnFail are the shared 0x69bb10).
+class CServerEvent;
+class CServerEventReward;
+
 class AQ_ServerEvent : public CAQJobT<AQ_ServerEvent>
 {
 public:
@@ -24,10 +27,17 @@ public:
     bool ExecInsertReward();
     bool ExecDeleteOrUpdateReward();
 
+    // 0x47ab50, 0x47ac40, 0x47ada0, 0x47ae60: m_strQuery of the type; FALSE (logged,
+    // asserted) when it cannot be built.
+    BOOL BuildUpdateQuery(CServerEvent* pEvent);
+    BOOL BuildInsertRewardQuery();
+    BOOL BuildDeleteRewardQuery();
+    BOOL BuildUpdateRewardQuery();
+
 public:
     DWORD           m_dwServerEventID;  // +50
-    DWORD           m_dw54;             // +54
-    DWORD           m_dw58;             // +58
+    DWORD           m_dw54;             // +54  reward ID
+    DWORD           m_dw58;             // +58  remaining reward time (CTimeSpan seconds)
     int             m_nEventType;       // +5C  1 update, 2 insert reward, 3 / 4 reward change
     std::string     m_strQuery;         // +60
 };
@@ -35,6 +45,18 @@ public:
 C_ASSERT(FIELD_OFFSET(AQ_ServerEvent, m_nEventType) == 0x5C);
 C_ASSERT(FIELD_OFFSET(AQ_ServerEvent, m_strQuery) == 0x60);
 C_ASSERT(sizeof(AQ_ServerEvent) == 0x7C);
+
+// The entry points of the server events (CServerEvent / CServerEventReward, SM_world6).
+// UserCertifier_AllocJob (0x47a8b0): a pool job with an overlap job ID.
+AQ_ServerEvent* AQ_ServerEvent_Alloc();
+// AQ_ServerEvent::InitUpdate (0x47a960): owner task, the event ID, type 1 and the update
+// statement of the event record.
+BOOL AQ_ServerEvent_InitUpdate(AQ_ServerEvent* pJob, CServerEvent* pEvent);
+// AQ_ServerEvent::InitReward (0x47a9d0): owner task, event ID, reward ID, remaining time, type
+// nKind (2 insert, 3 delete, 4 update) and its statement; another kind is logged and asserted.
+BOOL AQ_ServerEvent_InitReward(AQ_ServerEvent* pJob, CServerEventReward* pReward, int nKind);
+// The job's vftable slot 3 (ReturnToPool).
+void AQ_ServerEvent_Free(AQ_ServerEvent* pJob);
 
 enum
 {
@@ -94,3 +116,7 @@ enum
 {
     SHARD_TABLE_LOG_SERVER_EVENT    = 5,
 };
+
+// AQ_ServerEventLog::HandleReq4018 (0x47b580, CMainProcess::OnMsg_4018): a log job for the
+// request, sent to the DB task of the main process, or answered "Failed to Init" and freed.
+bool AQ_ServerEventLog_HandleRequest(CMsg* pMsg, DWORD dwRelayID);

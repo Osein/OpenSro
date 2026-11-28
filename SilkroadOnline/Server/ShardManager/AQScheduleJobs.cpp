@@ -468,6 +468,34 @@ bool AQ_ScheduleChangeStandardShard::Execute()
     return true;
 }
 
+bool AQ_ScheduleChangeStandardShard::ReadRequestList(CMassiveMsg* pMsg, DWORD dwRelayID,
+                                                     DWORD dwSessionID)
+{
+    if (!g_pShardMainProcess)
+        BSAssertFail();
+    CTask* pOwner = MainProcess_GetJobOwnerTask();
+    if (!pOwner)
+        BSAssertFail();
+    Init(pOwner);
+    m_dwSessionID = dwSessionID;
+    m_dwRelayID = dwRelayID;
+    m_dw50 = dwSessionID;
+
+    BYTE byMore = 1;
+    pMsg->Read(&byMore, 1);
+    if (byMore != 1)
+        return true;
+    do
+    {
+        AQ_STANDARD_SCHEDULE_ROW row;
+        pMsg->Read(&row, sizeof(row));
+        m_listSchedule.push_back(row);
+        pMsg->Read(&byMore, 1);
+    }
+    while (byMore == 1);
+    return true;
+}
+
 bool AQ_ScheduleChangeStandardShard::OnComplete()
 {
     if (!m_pResponse)

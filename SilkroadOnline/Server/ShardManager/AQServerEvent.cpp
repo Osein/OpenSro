@@ -3,7 +3,9 @@
 #include <strsafe.h>
 
 #include "BSLib/BSDebug.h"
+#include "BSLib/Util/TimeSpan.h"
 #include "ServerCommon/InstanceRecords.h"
+#include "ServerCommon/ReferenceData.h"
 #include "ServerFramework/ServerDataExtern.h"
 #include "ShardManager/AQLogSelector.h"
 #include "ShardManager/ShardAdminFwd.h"
@@ -335,4 +337,195 @@ void AQ_ServerEventLog::WriteLogRows(CDBRecordList* pList, CMassiveMsg* pMsg)
         return;
     }
     AQ_WriteText(pMsg, szTime);
+}
+
+// -------------------------------------------------------------------------------------------
+// The server event entry points
+
+namespace
+{
+
+// The record getters of the original: -1 (asserted) without a record.
+int EventField(CInstanceServerEvent* pRecord, int CInstanceServerEvent::*pField)
+{
+    if (!pRecord)
+    {
+        BSAssertFail();
+        return -1;
+    }
+    return pRecord->*pField;
+}
+
+int RewardField(CInstanceServerEventReward* pRecord, int CInstanceServerEventReward::*pField)
+{
+    if (!pRecord)
+    {
+        BSAssertFail();
+        return -1;
+    }
+    return pRecord->*pField;
+}
+
+// COverlapJob::Init with the job owner task of the main process (both asserted).
+void InitServerEventJob(AQ_ServerEvent* pJob)
+{
+    if (!g_pShardMainProcess)
+        BSAssertFail();
+    CTask* pOwner = MainProcess_GetJobOwnerTask();
+    if (!pOwner)
+        BSAssertFail();
+    pJob->Init(pOwner);
+}
+
+} // namespace
+
+AQ_ServerEvent* AQ_ServerEvent_Alloc()
+{
+    return AQ_ServerEvent::Alloc();
+}
+
+void AQ_ServerEvent_Free(AQ_ServerEvent* pJob)
+{
+    pJob->ReturnToPool();
+}
+
+BOOL AQ_ServerEvent_InitUpdate(AQ_ServerEvent* pJob, CServerEvent* pEvent)
+{
+    InitServerEventJob(pJob);
+    pJob->m_dwServerEventID = EventField(ServerEvent_GetRecord(pEvent),
+                                         &CInstanceServerEvent::ID);
+    pJob->m_dw54 = 0;
+    pJob->m_nEventType = 1;
+    pJob->m_strQuery.clear();
+    return pJob->BuildUpdateQuery(pEvent);
+}
+
+BOOL AQ_ServerEvent_InitReward(AQ_ServerEvent* pJob, CServerEventReward* pReward, int nKind)
+{
+    InitServerEventJob(pJob);
+    pJob->m_dwServerEventID = RewardField(ServerEventReward_GetRecord(pReward),
+                                          &CInstanceServerEventReward::ServerEventID);
+    pJob->m_dw54 = RewardField(ServerEventReward_GetRecord(pReward),
+                               &CInstanceServerEventReward::RewardID);
+    pJob->m_dw58 = RewardField(ServerEventReward_GetRecord(pReward),
+                               &CInstanceServerEventReward::RemainRewardTime);
+    pJob->m_nEventType = nKind;
+    pJob->m_strQuery.clear();
+    switch (nKind)
+    {
+    case 2:
+        return pJob->BuildInsertRewardQuery();
+    case 3:
+        return pJob->BuildDeleteRewardQuery();
+    case 4:
+        return pJob->BuildUpdateRewardQuery();
+    }
+    LogPrintf(0x2000001, "Not supported AQ_ServerEventType[%d]!!! ServerEvent[%d] RewardID[%d]",
+              nKind, pJob->m_dwServerEventID, pJob->m_dw54);
+    BSAssertFail();
+    return FALSE;
+}
+
+BOOL AQ_ServerEvent::BuildUpdateQuery(CServerEvent* pEvent)
+{
+    // The fields are read last to first.
+    int nProgress = EventField(ServerEvent_GetRecord(pEvent),
+                               &CInstanceServerEvent::ProgressCount);
+    int nCondition = EventField(ServerEvent_GetRecord(pEvent),
+                                &CInstanceServerEvent::AchievementCondition);
+    int nCompletion = EventField(ServerEvent_GetRecord(pEvent),
+                                 &CInstanceServerEvent::CompletionValue);
+    char szQuery[0xC00];
+    if (StringCchPrintfA(szQuery, 0xC00, "{?=CALL _UpdateServerEvent(%d, %d, %d, %d)}",
+                         m_dwServerEventID, nCompletion, nCondition, nProgress) != S_OK)
+    {
+        LogPrintf(0x2000001, "Failed to AQ_ServerEvent[%d] Type[%d]", m_dwServerEventID,
+                  m_nEventType);
+        BSAssertFail();
+        return FALSE;
+    }
+    m_strQuery.assign(szQuery, strlen(szQuery));
+    return TRUE;
+}
+
+BOOL AQ_ServerEvent::BuildInsertRewardQuery()
+{
+    // RefData_FindServerEventReward on the reference data (asserted).
+    RefServerEventReward* pRef = CReferenceData::GetInstance()->FindServerEventReward(m_dw54);
+    if (!pRef)
+    {
+        LogPrintf(0x2000001,
+                  "Failed to AQ_ServerEventType[%d]!! Not found Reward[%d] ServerEventID[%d]",
+                  m_nEventType, m_dw54, m_dwServerEventID);
+        BSAssertFail();
+        return FALSE;
+    }
+    if (pRef->Type != RefServerEventReward::TYPE_EXP_UP_FOR_PLAYERS)
+    {
+        LogPrintf(0x2000001,
+                  "Failed to AQ_ServerEventType[%d]!! Not supported RewardClass[%d] RewardID[%d] "
+                  "ServerEventID[%d]",
+                  m_nEventType, pRef->Type, m_dw54, m_dwServerEventID);
+        BSAssertFail();
+        return FALSE;
+    }
+    char szQuery[0xC00];
+    if (StringCchPrintfA(szQuery, 0xC00, "{?=CALL _InsertServerEventReward(%d, %d, %d)}",
+                         m_dwServerEventID, pRef->ID,
+                         ((RefServerEventReward_ExpUPForPlayers*)pRef)->dw18) != S_OK)
+    {
+        LogPrintf(0x2000001, "Failed to AQ_ServerEventType[%d] ServerEventID[%d] RewardID[%d]",
+                  m_nEventType, m_dwServerEventID, m_dw54);
+        BSAssertFail();
+        return FALSE;
+    }
+    m_strQuery.assign(szQuery, strlen(szQuery));
+    return TRUE;
+}
+
+BOOL AQ_ServerEvent::BuildDeleteRewardQuery()
+{
+    char szQuery[0xC00];
+    if (StringCchPrintfA(szQuery, 0xC00, "{?=CALL _DeleteServerEventReward(%d, %d)}",
+                         m_dwServerEventID, m_dw54) != S_OK)
+    {
+        LogPrintf(0x2000001, "Failed to AQ_ServerEventType[%d] ServerEventID[%d] RewardID",
+                  m_nEventType, m_dwServerEventID, m_dw54);
+        BSAssertFail();
+        return FALSE;
+    }
+    m_strQuery.assign(szQuery, strlen(szQuery));
+    return TRUE;
+}
+
+BOOL AQ_ServerEvent::BuildUpdateRewardQuery()
+{
+    LONG lSeconds = CTimeSpan((LONG)m_dw58).GetTotalSeconds();
+    char szQuery[0xC00];
+    if (StringCchPrintfA(szQuery, 0xC00, "{?=CALL _UpdateServerEventReward(%d, %d, %d)}",
+                         m_dwServerEventID, m_dw54, lSeconds) != S_OK)
+    {
+        LogPrintf(0x2000001, "Failed to AQ_ServerEventType[%d] ServerEventID[%d] RewardID",
+                  m_nEventType, m_dwServerEventID, m_dw54);
+        BSAssertFail();
+        return FALSE;
+    }
+    m_strQuery.assign(szQuery, strlen(szQuery));
+    return TRUE;
+}
+
+bool AQ_ServerEventLog_HandleRequest(CMsg* pMsg, DWORD dwRelayID)
+{
+    AQ_ServerEventLog* pJob = AQ_ServerEventLog::Alloc();
+    if (pJob->ReadRequest(pMsg, dwRelayID))
+    {
+        if (!g_pShardMainProcess)
+            BSAssertFail();
+        if (!g_pShardMainProcess)
+            BSAssertFail();
+        return g_pShardMainProcess->SendOverlapJob(pJob, MainProcess_GetDBJobTask());
+    }
+    pJob->OnInitFailed(AQ_OPCODE_SERVER_EVENT_LOG);
+    pJob->ReturnToPool();
+    return false;
 }
