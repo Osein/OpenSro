@@ -254,7 +254,7 @@ bool AQ_ServerEventLog::Execute()
         AQ_WriteString(m_pResponse, m_strDesc);
         if (!g_pShardDB)
             BSAssertFail();
-        CDBTable* pTable = g_pShardDB->GetTable(SHARD_TABLE_LOG_SERVER_EVENT);
+        CDBTable* pTable = ShardDB_GetLogTable(SHARD_TABLE_LOG_SERVER_EVENT);
         if (!pTable)
         {
             BSAssertFail();

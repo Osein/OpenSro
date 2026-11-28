@@ -267,7 +267,7 @@ bool AQ_ScheduleLog::Execute()
 
     if (!g_pShardDB)
         BSAssertFail();
-    CDBTable* pTable = g_pShardDB->GetTable(SHARD_TABLE_LOG_SCHEDULE);
+    CDBTable* pTable = ShardDB_GetLogTable(SHARD_TABLE_LOG_SCHEDULE);
     if (!pTable)
     {
         BSAssertFail();

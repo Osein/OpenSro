@@ -205,7 +205,7 @@ bool AQ_SiegeLogSelector::Execute()
 
     if (!g_pShardDB)
         BSAssertFail();
-    CDBTable* pTable = g_pShardDB->GetTable(SHARD_TABLE_LOG_SIEGE_FORTRESS);
+    CDBTable* pTable = ShardDB_GetLogTable(SHARD_TABLE_LOG_SIEGE_FORTRESS);
 
     char szQuery[0xC00];
     if (StringCchPrintfA(szQuery, 0xC00,

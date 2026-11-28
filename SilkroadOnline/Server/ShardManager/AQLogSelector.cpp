@@ -99,7 +99,7 @@ bool AQ_LogSelector::Execute()
     case AQ_LOG_CHAR:
         if (!g_pShardDB)
             BSAssertFail();
-        pTable = g_pShardDB->GetTable(SHARD_TABLE_LOG_CHAR);
+        pTable = ShardDB_GetLogTable(SHARD_TABLE_LOG_CHAR);
         if (m_bySubType == 9)
             nCharID = 0;
         if (StringCchPrintfA(szQuery, 0xC00,
@@ -117,7 +117,7 @@ bool AQ_LogSelector::Execute()
     case AQ_LOG_ITEM:
         if (!g_pShardDB)
             BSAssertFail();
-        pTable = g_pShardDB->GetTable(SHARD_TABLE_LOG_ITEM);
+        pTable = ShardDB_GetLogTable(SHARD_TABLE_LOG_ITEM);
         if (m_bySubType == 17)
             nCharID = 0;
         if (StringCchPrintfA(szQuery, 0xC00,
@@ -136,7 +136,7 @@ bool AQ_LogSelector::Execute()
     {
         if (!g_pShardDB)
             BSAssertFail();
-        pTable = g_pShardDB->GetTable(SHARD_TABLE_LOG_CHAR);
+        pTable = ShardDB_GetLogTable(SHARD_TABLE_LOG_CHAR);
         char szFilter[0xC00];
         if (StringCchPrintfA(szQuery, 0xC00,
                 "SELECT TOP %d EventTime, EventID, Data1, Data2, EventPos, strDesc FROM "
@@ -171,7 +171,7 @@ bool AQ_LogSelector::Execute()
         // GetSingleton_CShardDB
         if (!g_pShardDB)
             BSAssertFail();
-        pTable = g_pShardDB->GetTable(SHARD_TABLE_LOG_ITEM);
+        pTable = ShardDB_GetLogTable(SHARD_TABLE_LOG_ITEM);
         // Without a row limit the time range is left out too.
         const char* pszTop = m_dwTop ? szTop : "";
         const char* pszTime = m_dwTop ? szTime : "";

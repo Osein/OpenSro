@@ -17,6 +17,12 @@
 // jobs report to.
 CTask* MainProcess_GetJobOwnerTask();
 
+// Provided by SM_db (g_pShardDB->GetLogTable): table nIndex of the log table keeper at
+// CShardDB + 0x34 (CDBManager_GetSessionByIndex 0x46fd00, called by AQ_LogSelector and inlined
+// in AQ_ScheduleLog, AQ_ServerEventLog and AQ_SiegeLogSelector); asserts and returns NULL when
+// the index is out of range.
+CDBTable* ShardDB_GetLogTable(int nIndex);
+
 // Provided by the character DB helpers (DB_Select_Char 0x484ee0): the name of the character.
 std::string DB_Select_Char(int nCharID);
 
