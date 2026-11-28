@@ -23,6 +23,8 @@ class CShardDB;
 extern CShardDB* g_pShardDB;
 // *(CShardDB + 8): the session pool of the shard database.
 CDBSessionMgr* ShardDB_GetSession(CShardDB* pDB);
+// *(CShardDB + 0x0C): the session pool of the log database.
+CDBSessionMgr* ShardDB_GetLogSession(CShardDB* pDB);
 // CDBConnPool_GetConnAt: the registered table nIndex (asserts and returns NULL when the table
 // vector is shorter).
 CDBTable* ShardDB_GetTable(CShardDB* pDB, DWORD nIndex);

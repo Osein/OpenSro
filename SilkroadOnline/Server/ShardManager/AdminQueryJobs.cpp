@@ -198,7 +198,7 @@ bool AQ_CharDataEditor::OnComplete()
     AQ_WriteString(pResponse, m_pEditor->m_strMessage);
     CMassiveMsg* pReply = m_pEditor->m_pReply;
     BYTE byOK = 1;
-    BYTE byFlag = m_pEditor->m_byReplyFlag;
+    BYTE byFlag = m_pEditor->m_byQueryType;
     pResponse->Write(&byOK, 1);
     pResponse->Write(&m_byMode, 1);
     pResponse->Write(&byFlag, 1);

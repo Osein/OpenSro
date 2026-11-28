@@ -2,7 +2,7 @@
 
 #include "ServerCommon/InstanceRecords.h"
 #include "ShardManager/AQBase.h"
-#include "ShardManager/CharDataEditorFwd.h"
+#include "ShardManager/CharDataEditor.h"
 
 // Admin query jobs of the SMC console that change shard data.
 
