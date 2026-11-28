@@ -160,7 +160,7 @@ bool AQ_ServerEvent::ExecDeleteOrUpdateReward()
 AQ_ServerEventLog::AQ_ServerEventLog()
 {
     m_dwAfterID = 0;
-    m_by54 = 0;
+    m_byInsertLogType = 0;
     m_dwServerEventID = 0;
     m_byLogType = 0;
     m_nMode = -1;
@@ -511,6 +511,31 @@ BOOL AQ_ServerEvent::BuildUpdateRewardQuery()
         return FALSE;
     }
     m_strQuery.assign(szQuery, strlen(szQuery));
+    return TRUE;
+}
+
+BOOL DB_Insert_LogServerEvent(const std::string& strDesc, BYTE byType, AQ_ServerEventLog* pJob,
+                              DWORD dwEventID)
+{
+    if (!g_pShardMainProcess)
+        BSAssertFail();
+    CTask* pOwner = MainProcess_GetJobOwnerTask();
+    if (!pOwner)
+        BSAssertFail();
+    pJob->Init(pOwner);
+    pJob->m_strQuery.clear();
+    pJob->m_byInsertLogType = byType;
+    pJob->m_dwServerEventID = dwEventID;
+
+    char szQuery[0xC00];
+    if (StringCchPrintfA(szQuery, 0xC00, "INSERT _LogServerEvent VALUES( GetDate(), %d, %d, '%s' )",
+                         dwEventID, byType, strDesc.c_str()) != S_OK)
+    {
+        BSAssertFail();
+        return FALSE;
+    }
+    pJob->m_strQuery.assign(szQuery, strlen(szQuery));
+    pJob->m_nMode = AQ_SERVER_EVENT_LOG_INSERT;
     return TRUE;
 }
 

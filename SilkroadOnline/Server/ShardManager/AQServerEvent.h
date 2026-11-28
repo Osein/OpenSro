@@ -94,7 +94,7 @@ public:
 
 public:
     DWORD           m_dwAfterID;        // +50  rows with a greater ID
-    BYTE            m_by54;             // +54
+    BYTE            m_byInsertLogType;  // +54  LogType of an insert (mode 5)
     DWORD           m_dwServerEventID;  // +58
     std::string     m_strQuery;         // +5C
     std::string     m_strFrom;          // +78  EventTime range
@@ -120,3 +120,10 @@ enum
 // AQ_ServerEventLog::HandleReq4018 (0x47b580, CMainProcess::OnMsg_4018): a log job for the
 // request, sent to the DB task of the main process, or answered "Failed to Init" and freed.
 bool AQ_ServerEventLog_HandleRequest(CMsg* pMsg, DWORD dwRelayID);
+
+// DB_Insert_LogServerEvent (0x47b2b0, the ServerEventLog_Log* functions): Init on the job owner
+// task of the main process, byType and dwEventID into the job and "INSERT _LogServerEvent
+// VALUES( GetDate(), %d, %d, '%s' )" into m_strQuery (mode 5). FALSE (asserted) when the text
+// does not fit.
+BOOL DB_Insert_LogServerEvent(const std::string& strDesc, BYTE byType, AQ_ServerEventLog* pJob,
+                              DWORD dwEventID);

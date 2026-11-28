@@ -16,19 +16,13 @@
 // What the association reputation, the log jobs and the other SM_world1 parts use from parts of
 // SR_ShardManager that are ported elsewhere. Only the calls made here are declared; the owners
 // replace these declarations. CShardDB, g_pMainProcess and CMainProcess come from ShardExtern.h,
-// MainProcess_PostDBJob from ServerEventExtern.h.
+// MainProcess_PostDBJob from ServerEventExtern.h. The statement builders of the log and
+// reputation jobs are with the admin query jobs (AdminQueryJobs.h, AQScheduleJobs.h,
+// AQServerEvent.h).
 
 class CDBTable;
 class CMainProcess;
 class CMsg;
-
-// ---------------------------------------------------------------------------------------------
-// Provided by SM_main3 (the statement builders of the AQ jobs)
-
-// DB_Insert_LogServerEvent (0x47b2b0): "INSERT _LogServerEvent VALUES( GetDate(), %d, %d,
-// '%s' )" with dwEventID, byType and strDesc.
-BOOL DB_Insert_LogServerEvent(const std::string& strDesc, BYTE byType,
-                              ServerFramework::COverlapJob* pJob, DWORD dwEventID);
 
 // ---------------------------------------------------------------------------------------------
 // Provided by SM_main (CMainProcess)
