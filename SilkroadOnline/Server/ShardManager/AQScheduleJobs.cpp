@@ -8,6 +8,7 @@
 #include "ServerFramework/ServerDataExtern.h"
 #include "ServerFramework/Trigger.h"
 #include "ShardManager/ShardAdminFwd.h"
+#include "ShardManager/ShardSchedule.h"
 
 using ServerFramework::CClassTrigger;
 using ServerFramework::CMassiveMsg;
@@ -91,7 +92,7 @@ bool AQ_ScheduleInit::Execute()
 
 bool AQ_ScheduleInit::OnComplete()
 {
-    ShardScheduleManager_DumpSchedules();
+    CShard_ScheduleManager::DumpSchedules();
     return AQ_Base::OnComplete();
 }
 
@@ -214,7 +215,7 @@ bool AQ_ScheduleChange::OnComplete()
     SCHEDULE_DATA data;
     if (m_byChangeType == AQ_SCHEDULE_INSERT)
     {
-        ShardScheduleManager_AddSchedule(CopyScheduleRow(&m_Row, &data));
+        g_ShardScheduleManager.AddSchedule(CopyScheduleRow(&m_Row, &data));
         const WORD* pBegin = RowDate(m_Row.stBegin);
         const WORD* pEnd = RowDate(m_Row.stEnd);
         LogPrintf(0x2000001,
@@ -231,7 +232,7 @@ bool AQ_ScheduleChange::OnComplete()
     {
         m_Row.dwDefineID = m_dwDefineIdx;
         m_Row.dwScheduleID = m_dwScheduleIdx;
-        ShardScheduleManager_RemoveSchedule(CopyScheduleRow(&m_Row, &data));
+        g_ShardScheduleManager.RemoveSchedule(CopyScheduleRow(&m_Row, &data));
         LogPrintf(0x2000001, "Scheduleing : Delete - %d, %d", m_Row.dwDefineID,
                   m_Row.dwScheduleID);
     }
@@ -480,7 +481,7 @@ bool AQ_ScheduleChangeStandardShard::Execute()
         {
             SCHEDULE_DATA data;
             memset(&data, 0, sizeof(data));
-            ShardScheduleManager_AddSchedule(
+            g_ShardScheduleManager.AddSchedule(
                 AQ_CopyStandardScheduleRow(&data, adwNew[0], adwNew[1], &row));
         }
         else

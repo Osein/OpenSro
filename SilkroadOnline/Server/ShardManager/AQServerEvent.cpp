@@ -8,6 +8,7 @@
 #include "ServerCommon/ReferenceData.h"
 #include "ServerFramework/ServerDataExtern.h"
 #include "ShardManager/AQLogSelector.h"
+#include "ShardManager/ServerEvent.h"
 #include "ShardManager/ShardAdminFwd.h"
 
 using ServerFramework::CMassiveMsg;
@@ -345,27 +346,6 @@ void AQ_ServerEventLog::WriteLogRows(CDBRecordList* pList, CMassiveMsg* pMsg)
 namespace
 {
 
-// The record getters of the original: -1 (asserted) without a record.
-int EventField(CInstanceServerEvent* pRecord, int CInstanceServerEvent::*pField)
-{
-    if (!pRecord)
-    {
-        BSAssertFail();
-        return -1;
-    }
-    return pRecord->*pField;
-}
-
-int RewardField(CInstanceServerEventReward* pRecord, int CInstanceServerEventReward::*pField)
-{
-    if (!pRecord)
-    {
-        BSAssertFail();
-        return -1;
-    }
-    return pRecord->*pField;
-}
-
 // COverlapJob::Init with the job owner task of the main process (both asserted).
 void InitServerEventJob(AQ_ServerEvent* pJob)
 {
@@ -392,8 +372,7 @@ void AQ_ServerEvent_Free(AQ_ServerEvent* pJob)
 BOOL AQ_ServerEvent_InitUpdate(AQ_ServerEvent* pJob, CServerEvent* pEvent)
 {
     InitServerEventJob(pJob);
-    pJob->m_dwServerEventID = EventField(ServerEvent_GetRecord(pEvent),
-                                         &CInstanceServerEvent::ID);
+    pJob->m_dwServerEventID = pEvent->GetID();
     pJob->m_dw54 = 0;
     pJob->m_nEventType = 1;
     pJob->m_strQuery.clear();
@@ -403,12 +382,9 @@ BOOL AQ_ServerEvent_InitUpdate(AQ_ServerEvent* pJob, CServerEvent* pEvent)
 BOOL AQ_ServerEvent_InitReward(AQ_ServerEvent* pJob, CServerEventReward* pReward, int nKind)
 {
     InitServerEventJob(pJob);
-    pJob->m_dwServerEventID = RewardField(ServerEventReward_GetRecord(pReward),
-                                          &CInstanceServerEventReward::ServerEventID);
-    pJob->m_dw54 = RewardField(ServerEventReward_GetRecord(pReward),
-                               &CInstanceServerEventReward::RewardID);
-    pJob->m_dw58 = RewardField(ServerEventReward_GetRecord(pReward),
-                               &CInstanceServerEventReward::RemainRewardTime);
+    pJob->m_dwServerEventID = pReward->GetServerEventID();
+    pJob->m_dw54 = pReward->GetRewardID();
+    pJob->m_dw58 = pReward->GetRemainRewardTime();
     pJob->m_nEventType = nKind;
     pJob->m_strQuery.clear();
     switch (nKind)
@@ -429,12 +405,9 @@ BOOL AQ_ServerEvent_InitReward(AQ_ServerEvent* pJob, CServerEventReward* pReward
 BOOL AQ_ServerEvent::BuildUpdateQuery(CServerEvent* pEvent)
 {
     // The fields are read last to first.
-    int nProgress = EventField(ServerEvent_GetRecord(pEvent),
-                               &CInstanceServerEvent::ProgressCount);
-    int nCondition = EventField(ServerEvent_GetRecord(pEvent),
-                                &CInstanceServerEvent::AchievementCondition);
-    int nCompletion = EventField(ServerEvent_GetRecord(pEvent),
-                                 &CInstanceServerEvent::CompletionValue);
+    int nProgress = pEvent->GetProgressCount();
+    int nCondition = pEvent->GetAchievementCondition();
+    int nCompletion = pEvent->GetCompletionValue();
     char szQuery[0xC00];
     if (StringCchPrintfA(szQuery, 0xC00, "{?=CALL _UpdateServerEvent(%d, %d, %d, %d)}",
                          m_dwServerEventID, nCompletion, nCondition, nProgress) != S_OK)
