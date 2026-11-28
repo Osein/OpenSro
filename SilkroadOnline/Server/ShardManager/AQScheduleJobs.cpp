@@ -333,6 +333,29 @@ bool AQ_ScheduleInsertLog::Execute()
     return false;
 }
 
+BOOL DB_Insert_LogSchedule(AQ_ScheduleInsertLog* pJob, std::string strModule, int nServerID,
+                           std::string strDefine, DWORD dwScheduleID, std::string strState,
+                           CDateTime dt)
+{
+    if (!g_pShardMainProcess)
+        BSAssertFail();
+    CTask* pOwner = MainProcess_GetJobOwnerTask();
+    if (!pOwner)
+        BSAssertFail();
+    pJob->Init(pOwner);
+
+    char szQuery[0x400];
+    memset(szQuery, 0, sizeof(szQuery));
+    StringCchPrintfA(szQuery, 0x400,
+                     "INSERT INTO _LogSchedule VALUES( '%s', %d, '%s', %d, '%s', "
+                     "'%02d-%02d-%02d %02d:%02d:%02d')",
+                     strModule.c_str(), nServerID, strDefine.c_str(), dwScheduleID,
+                     strState.c_str(), dt.GetYear(), dt.GetMonth(), dt.GetDay(), dt.GetHour(),
+                     dt.GetMinute(), dt.GetSecond());
+    pJob->m_strQuery.assign(szQuery, strlen(szQuery));
+    return TRUE;
+}
+
 // -------------------------------------------------------------------------------------------
 // AQ_StandardShardScheduleInfo
 

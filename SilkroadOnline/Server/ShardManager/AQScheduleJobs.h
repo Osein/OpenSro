@@ -3,6 +3,7 @@
 #include <list>
 
 #include "BSLib/NewSchedule/ScheduleManager.h"
+#include "BSLib/Util/TimeSpan.h"
 #include "ShardManager/AQBase.h"
 
 // Schedule jobs of the SMC console: the _RefScheduleDefine / _Schedule tables as raw rows, a
@@ -162,6 +163,13 @@ public:
 
 C_ASSERT(FIELD_OFFSET(AQ_ScheduleInsertLog, m_strQuery) == 0x50);
 C_ASSERT(sizeof(AQ_ScheduleInsertLog) == 0x6C);
+
+// DB_Insert_LogSchedule (0x4735b0, Schedule_InsertLogAsync): Init on the job owner task of the
+// main process and "INSERT INTO _LogSchedule VALUES( ... )" with the values and the time of dt
+// into m_strQuery. Always TRUE: the text is not checked (a row that does not fit is cut).
+BOOL DB_Insert_LogSchedule(AQ_ScheduleInsertLog* pJob, std::string strModule, int nServerID,
+                           std::string strDefine, DWORD dwScheduleID, std::string strState,
+                           CDateTime dt);
 
 // AQ_StandardShardScheduleInfo (0x54 bytes): every schedule with its define name, as the
 // standard shard's list (answer 0x8022).

@@ -29,11 +29,6 @@ class CMsg;
 // '%s' )" with dwEventID, byType and strDesc.
 BOOL DB_Insert_LogServerEvent(const std::string& strDesc, BYTE byType,
                               ServerFramework::COverlapJob* pJob, DWORD dwEventID);
-// DB_Insert_LogSchedule (0x4735b0): "INSERT INTO _LogSchedule VALUES( ... )" with the values
-// and the local time of dt.
-BOOL DB_Insert_LogSchedule(ServerFramework::COverlapJob* pJob, std::string strModule,
-                           int nServerID, std::string strDefine, DWORD dwScheduleID,
-                           std::string strState, CDateTime dt);
 
 // ---------------------------------------------------------------------------------------------
 // Provided by SM_main (CMainProcess)
