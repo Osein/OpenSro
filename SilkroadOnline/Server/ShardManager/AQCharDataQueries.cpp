@@ -6,6 +6,7 @@
 
 #include "BSLib/BSDebug.h"
 #include "ServerCommon/InstanceRecords.h"
+#include "ServerCommon/RefDataObj.h"
 #include "ServerCommon/ReferenceData.h"
 #include "ServerFramework/ServerDataExtern.h"
 #include "ShardManager/AQDBLoaders.h"
@@ -607,4 +608,214 @@ bool AQ_CharDataSelector::QueryOpenMarketByDate()
     AQ_CharDataSelector_WriteOpenMarketRows(m_pResponse, &listRows);
     DB_FreeRecordList(&listRows, pTable);
     return true;
+}
+
+// -------------------------------------------------------------------------------------------
+// Item description (Item_FormatDescription 0x469240)
+
+namespace
+{
+
+// The "%s, <name> +<value>" options: the text is appended to the one built so far and a
+// failed StringCchPrintfA asserts. The codes are the Param1 of the _RefMagicOpt rows.
+struct MAGIC_OPTION_TEXT
+{
+    DWORD       dwCode;
+    const char* pszFormat;
+};
+
+const MAGIC_OPTION_TEXT s_aMagicOptionText[] =
+{
+    { 0x6572,     "%s, er +%d%%" },
+    { 0x6275,     "%s, anti-burn +%d%%" },
+    { 0x6573,     "%s, anti-eshock +%d%%" },
+    { 0x667A,     "%s, anti-frostbite +%d%%" },
+    { 0x6870,     "%s, hp +%d" },
+    { 0x6872,     "%s, hr +%d%%" },
+    { 0x7A62,     "%s, anti-zombie +%d%%" },
+    { 0x6D70,     "%s, mp +%d" },
+    { 0x7073,     "%s, anti-toxin +%d%%" },
+    { 0x627269,   "%s, block rate +%d" },
+    { 0x6D7061,   "%s, Ava mp +%d" },
+    { 0x687061,   "%s, Ava hp +%d" },
+    { 0x637269,   "%s, critical +%d" },
+    { 0x657261,   "%s, Ava er +%d%%" },
+    { 0x687261,   "%s, Ava hr +%d%%" },
+    { 0x61737472, "%s, astr +%d" },
+    { 0x64617261, "%s, Ava dara +%d%%" },
+    { 0x6D707267, "%s, Ava mprg +%d%%" },
+    { 0x68706D70, "%s, regen hpmp +%d%%" },
+    { 0x64757275, "%s, duru +%d%%" },
+    { 0x64727561, "%s, Ava daru +%d%%" },
+    { 0x64757261, "%s, flaw -%d%%" },
+    { 0x6576626C, "%s, evbl +%d%%" },
+    { 0x65766372, "%s, evcr +%d%%" },
+    { 0x696E7461, "%s, Ava int +%d" },
+    { 0x68707267, "%s, Ava hprg +%d%%" },
+    { 0x6D646961, "%s, Ava mdia +%d%%" },
+    { 0x72666569, "%s, resist fear +%d%%" },
+    { 0x72646969, "%s, resist disease +%d%%" },
+    { 0x72637369, "%s, resist csmp +%d%%" },
+    { 0x72737469, "%s, resist stun +%d%%" },
+    { 0x72736C69, "%s, resist sleep +%d%%" },
+    { 0x73747261, "%s, Ava str +%d" },
+};
+
+enum
+{
+    MAGIC_OPTION_STR            = 0x737472,
+    MAGIC_OPTION_INT            = 0x696E74,
+    MAGIC_OPTION_UNREPARABLE    = 0x6E726570,
+    MAGIC_OPTION_REINFORCE      = 0x7265696E,
+    MAGIC_OPTION_BLESS_APE      = 0x617065,
+    MAGIC_OPTION_BLESS_ATHA     = 0x61746861,
+    MAGIC_OPTION_BLESS_REP      = 0x726570,
+    MAGIC_OPTION_BLESS_LUCK     = 0x6C75636B,
+    MAGIC_OPTION_BLESS_SOLID    = 0x736F6C69,
+};
+
+const int ITEM_TEXT_SIZE = 0x400;
+
+// The bless options (no assert on a failed format). The unknown bless text is only reached
+// for the five codes above, so it is never written.
+void FormatBless(char* pszText, const mfunc_desc* pDesc, int nValue)
+{
+    // The original reads the DWORD at +0x14 of the descriptor (Param4 of a range).
+    DWORD dwRate = static_cast<const mfunc_single_range*>(pDesc)->m_dwMax;
+    switch (pDesc->m_dwCode)
+    {
+    case MAGIC_OPTION_BLESS_ATHA:
+        StringCchPrintfA(pszText, ITEM_TEXT_SIZE, "atha(%d%%): %d", dwRate, nValue);
+        break;
+    case MAGIC_OPTION_BLESS_APE:
+        StringCchPrintfA(pszText, ITEM_TEXT_SIZE, "ape(%d%%): %d,", dwRate, nValue);
+        break;
+    case MAGIC_OPTION_BLESS_REP:
+        StringCchPrintfA(pszText, ITEM_TEXT_SIZE, "rep: %d,", nValue - 1);
+        break;
+    case MAGIC_OPTION_BLESS_LUCK:
+        StringCchPrintfA(pszText, ITEM_TEXT_SIZE, "luck(%d%%): %d", dwRate, nValue);
+        break;
+    case MAGIC_OPTION_BLESS_SOLID:
+        StringCchPrintfA(pszText, ITEM_TEXT_SIZE, "solid(%d%%): %d", dwRate, nValue);
+        break;
+    default:
+        StringCchPrintfA(pszText, ITEM_TEXT_SIZE, "unknown bless[%d]", pDesc->m_dwCode);
+        break;
+    }
+}
+
+// One magic parameter (low DWORD: option ID, high DWORD: value) into pszText. Unknown
+// options and codes leave the text unchanged.
+// BUG(SM-350): the bless, unreparable and reinforce texts replace the text built so far
+// (the leading "[" and the earlier options) instead of being appended.
+void FormatMagicOption(char* pszText, __int64 qwParam)
+{
+    int nValue = (int)(qwParam >> 32);
+    DWORD dwMLevel = 0;
+    if (!g_pReferenceData)
+        BSAssertFail();
+    const mfunc_desc* pDesc =
+        g_pReferenceData->m_MagicOpt.FindMagicOption((WORD)qwParam, &dwMLevel);
+    if (!pDesc)
+        return;
+
+    DWORD dwCode = pDesc->m_dwCode;
+    for (size_t i = 0; i < _countof(s_aMagicOptionText); ++i)
+    {
+        if (s_aMagicOptionText[i].dwCode == dwCode)
+        {
+            if (StringCchPrintfA(pszText, ITEM_TEXT_SIZE, s_aMagicOptionText[i].pszFormat,
+                                 pszText, nValue) != S_OK)
+                BSAssertFail();
+            return;
+        }
+    }
+    switch (dwCode)
+    {
+    case MAGIC_OPTION_STR:
+        // Without a value the magic level is shown.
+        StringCchPrintfA(pszText, ITEM_TEXT_SIZE, "%sstr +%d,", pszText,
+                         nValue ? (DWORD)nValue : dwMLevel);
+        break;
+    case MAGIC_OPTION_INT:
+        if (nValue)
+            StringCchPrintfA(pszText, ITEM_TEXT_SIZE, "%sint +%d", pszText, nValue);
+        else
+            StringCchPrintfA(pszText, ITEM_TEXT_SIZE, "%sint +%d,", pszText, dwMLevel);
+        break;
+    case MAGIC_OPTION_UNREPARABLE:
+        if (StringCchPrintfA(pszText, ITEM_TEXT_SIZE, "unreparable") != S_OK)
+            BSAssertFail();
+        break;
+    case MAGIC_OPTION_REINFORCE:
+        // The DWORD at +0x10 of the descriptor (Param3).
+        if (StringCchPrintfA(pszText, ITEM_TEXT_SIZE, "reinforce +%d%%",
+                             static_cast<const mfunc_single_range*>(pDesc)->m_dwMin) != S_OK)
+            BSAssertFail();
+        break;
+    case MAGIC_OPTION_BLESS_APE:
+    case MAGIC_OPTION_BLESS_ATHA:
+    case MAGIC_OPTION_BLESS_REP:
+    case MAGIC_OPTION_BLESS_LUCK:
+    case MAGIC_OPTION_BLESS_SOLID:
+        FormatBless(pszText, pDesc, nValue);
+        break;
+    }
+}
+
+} // namespace
+
+void Item_FormatDescription(CInstanceItem* pItem, std::string* pstrOut)
+{
+    pstrOut->clear();
+    if (!g_pReferenceData)
+        BSAssertFail();
+    RefObjCommonRow* pRef = g_pReferenceData->FindRefObj(pItem->RefItemID);
+    // Equipment only (item, TID2 1).
+    if (!pRef || !RefTypeID_Is(pRef->TypeID, 0, 3, 1))
+        return;
+
+    std::string strGender;
+    std::string strOptLevel;
+    std::string strVariance;
+    std::string strMagic;
+    char szText[ITEM_TEXT_SIZE];
+
+    BYTE byGender = static_cast<RefObjItem*>(pRef)->ReqGender;
+    if (byGender == 1)
+        strGender.assign("[M] ", 4);
+    else if (byGender == 0)
+        strGender = "[F] ";
+
+    if (pItem->OptLevel)
+    {
+        szText[0] = 0;
+        if (StringCchPrintfA(szText, ITEM_TEXT_SIZE, "[OptLvl: +%d] ", pItem->OptLevel) != S_OK)
+            BSAssertFail();
+        strOptLevel.assign(szText, strlen(szText));
+    }
+    if (pItem->Variance)
+    {
+        szText[0] = 0;
+        if (StringCchPrintfA(szText, ITEM_TEXT_SIZE, "[Var: %I64d] ", pItem->Variance) != S_OK)
+            BSAssertFail();
+        strVariance.assign(szText, strlen(szText));
+    }
+    if (pItem->MagParamNum)
+    {
+        szText[0] = 0;
+        if (StringCchPrintfA(szText, ITEM_TEXT_SIZE, "[") != S_OK)
+            BSAssertFail();
+        for (int i = 0; i < pItem->MagParamNum; ++i)
+            FormatMagicOption(szText, pItem->MagParam[i]);
+        if (StringCchPrintfA(szText, ITEM_TEXT_SIZE, "%s]", szText) != S_OK)
+            BSAssertFail();
+        strMagic.assign(szText, strlen(szText));
+    }
+
+    pstrOut->append(strGender, 0, std::string::npos);
+    pstrOut->append(strOptLevel, 0, std::string::npos);
+    pstrOut->append(strVariance, 0, std::string::npos);
+    pstrOut->append(strMagic, 0, std::string::npos);
 }

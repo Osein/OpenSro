@@ -73,7 +73,8 @@ void AQ_CharDataSelector_WriteItemDetailRows(ServerFramework::CMassiveMsg* pMsg,
 // 0x46d3f0: the _OpenMarket rows.
 void AQ_CharDataSelector_WriteOpenMarketRows(ServerFramework::CMassiveMsg* pMsg,
                                              CDBRecordList* pList);
-// Item_FormatDescription (0x469240): the console text of an item.
+// Item_FormatDescription (0x469240): the console text of an equipment item (else empty):
+// gender, option level, variance and the magic options.
 void Item_FormatDescription(CInstanceItem* pItem, std::string* pstrOut);
 
 C_ASSERT(FIELD_OFFSET(AQ_CharDataSelector, m_strName) == 0x58);
