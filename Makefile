@@ -386,7 +386,8 @@ SHARD_ADMIN_OBJS = $(OBJ)\ShardManager\AQBase.obj \
 	$(OBJ)\ShardManager\AQCharDataSelector.obj \
 	$(OBJ)\ShardManager\AQStatementJobs.obj \
 	$(OBJ)\ShardManager\AQDBLoaders.obj \
-	$(OBJ)\ShardManager\CharDataEditor.obj
+	$(OBJ)\ShardManager\CharDataEditor.obj \
+	$(OBJ)\ShardManager\CgiCallForMuiltiFarmMgr.obj
 
 TESTS = $(TESTS) $(BIN)\ShardClimateTest.exe
 
