@@ -28,6 +28,8 @@ enum
     SHARD_TABLE_TRAINING_CAMP_BUFF  = 0x19,
     SHARD_TABLE_GUILD_CHEST         = 0x20,
     SHARD_TABLE_SIEGE_FORTRESS      = 0x25,
+    SHARD_TABLE_SIEGE_FORTRESS_REQUEST = 0x28,
+    SHARD_TABLE_SIEGE_FORTRESS_STRUCT = 0x2A,
     SHARD_TABLE_INV_AVATAR          = 0x2E,
     SHARD_TABLE_INV_LINKED_STORAGE  = 0x30,
     SHARD_TABLE_ITEM_BY_DBID        = 0x33,
@@ -76,6 +78,12 @@ BYTE AQ_DB_LoadCharTrainingCamp(CDBRecordList* pMembers, CDBRecordList* pBuffs,
 BYTE AQ_DB_LoadGuildData(CDBRecordList* pAlliances, CDBRecordList* pFortresses,
                          const std::string& strGuildName, CDBRecordList* pGuilds,
                          CDBRecordList* pMembers);
+
+// 0x485df0: a siege fortress, its structures, the members of its owner guild and the guilds
+// that requested the siege. The lists of the last three are only freed and logged when their
+// select fails.
+BYTE AQ_DB_LoadFortressData(CDBRecordList* pMembers, CDBRecordList* pRequests, int nFortressID,
+                            CDBRecordList* pFortresses, CDBRecordList* pStructs);
 
 // First int column of the first record of a list (the ID of the row).
 inline int AQ_DB_RecordInt(const CDBRecordList* pList, int nOffset)

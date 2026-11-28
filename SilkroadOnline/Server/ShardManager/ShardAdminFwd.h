@@ -95,3 +95,8 @@ void ShardScheduleManager_RemoveSchedule(const NewSchedule::SCHEDULE_DATA* pData
 // sScheduleRow::Copy (0x663560).
 NewSchedule::SCHEDULE_DATA* CopyScheduleRow(const NewSchedule::SCHEDULE_DATA* pSrc,
                                             NewSchedule::SCHEDULE_DATA* pDst);
+
+// Provided by the guild group: CGuildMgrCommon::FindGuild (0x40bf10) on the guild manager
+// (0x8A8924, asserted), NULL when there is no such guild; the name of a guild (0x4409a0).
+void* GuildManager_FindGuild(int nGuildID);
+void Guild_GetName(void* pGuild, std::string& strName);

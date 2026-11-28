@@ -454,3 +454,74 @@ BYTE AQ_DB_LoadGuildData(CDBRecordList* pAlliances, CDBRecordList* pFortresses,
     }
     return 1;
 }
+
+BYTE AQ_DB_LoadFortressData(CDBRecordList* pMembers, CDBRecordList* pRequests, int nFortressID,
+                            CDBRecordList* pFortresses, CDBRecordList* pStructs)
+{
+    if (!nFortressID)
+        return 2;
+    CDBTable* pFortressTable = GetTable(SHARD_TABLE_SIEGE_FORTRESS);
+    CDBTable* pStructTable = GetTable(SHARD_TABLE_SIEGE_FORTRESS_STRUCT);
+    CDBTable* pMemberTable = GetTable(SHARD_TABLE_GUILD_MEMBER);
+    CDBTable* pRequestTable = GetTable(SHARD_TABLE_SIEGE_FORTRESS_REQUEST);
+
+    char szClause[0xC00];
+    memset(szClause, 0, sizeof(szClause));
+    if (StringCchPrintfA(szClause, 0xC00, "WHERE FortressID = %d", nFortressID) != S_OK)
+    {
+        BSAssertFail();
+        return 2;
+    }
+    if (!pFortressTable->SelectWhere(szClause, 4, pFortresses, 1))
+    {
+        DB_FreeRecordList(pFortresses, pFortressTable);
+        return 7;
+    }
+    size_t nFortresses = pFortresses->size();
+    if (nFortresses > 1)
+    {
+        LogPrintf(0x2000000, "There are 2 or more Fortress (match fortressID : %d)",
+                  nFortressID);
+        return 3;
+    }
+    if (!nFortresses)
+    {
+        LogPrintf(0, "There are no Fortress. (match fortressID : %d)", nFortressID);
+        return 4;
+    }
+
+    // FortressID (+18) and GuildID (+1C) of the fortress record.
+    int nRecordFortressID = AQ_DB_RecordInt(pFortresses, 0x18);
+    int nGuildID = AQ_DB_RecordInt(pFortresses, 0x1C);
+    if (StringCchPrintfA(szClause, 0xC00, "WHERE FortressID = %d", nRecordFortressID) != S_OK)
+    {
+        BSAssertFail();
+        return 2;
+    }
+    if (!pStructTable->SelectWhere(szClause, 4, pStructs, 1))
+    {
+        DB_FreeRecordList(pStructs, pStructTable);
+        LogPrintf(0, "There are no struct in this fortress. ( fortress id : %d)", nFortressID);
+    }
+    if (StringCchPrintfA(szClause, 0xC00, "WHERE GuildID = %d", nGuildID) != S_OK)
+    {
+        BSAssertFail();
+        return 2;
+    }
+    if (!pMemberTable->SelectWhere(szClause, 4, pMembers, 1))
+    {
+        DB_FreeRecordList(pMembers, pMemberTable);
+        LogPrintf(0, "There are no guild member list. ( guild id : %d)", nGuildID);
+    }
+    if (StringCchPrintfA(szClause, 0xC00, "WHERE FortressID = %d", nRecordFortressID) != S_OK)
+    {
+        BSAssertFail();
+        return 2;
+    }
+    if (!pRequestTable->SelectWhere(szClause, 4, pRequests, 1))
+    {
+        DB_FreeRecordList(pRequests, pRequestTable);
+        LogPrintf(0, "There are no request guild list. ( fortress id : %d)", nRecordFortressID);
+    }
+    return 1;
+}
