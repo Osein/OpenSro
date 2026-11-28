@@ -17,7 +17,6 @@ public:
     // 0x46bbb0: "Querying Data of Character (<target>) : [ CharName <name> ]".
     void BuildDescription();
 
-    // Pending in SM_admin1 (record layouts of the loaders of SM_admin3).
     bool QueryCharInfo();               // 0x469c50, target 1
     bool QueryItems();                  // 0x46a010, targets 2, 3, 4, 7, 11, 14, 16
     bool QuerySkills();                 // 0x46a5c0, target 6
@@ -46,6 +45,23 @@ public:
     std::string         m_strC0;            // +C0  target 23
     std::string         m_strDC;            // +DC  target 23
 };
+
+class CInstancePC;
+class CInstanceItem;
+
+// 0x468c10: the _Char columns of the information page (object and region names, levels,
+// experience, stats, gold, position, PK data, last logout).
+void AQ_CharDataSelector_WriteCharInfo(ServerFramework::CMassiveMsg* pMsg, CInstancePC* pPC);
+// 0x469010: per item {BYTE slot, RefItemID, ID64, Serial64, Data, description}; the slot and
+// item lists run in parallel (same size asserted).
+void AQ_CharDataSelector_WriteItemList(CDBRecordList* pItems, ServerFramework::CMassiveMsg* pMsg,
+                                       CDBRecordList* pSlots);
+// 0x46a430: per skill {SkillID, level of the reference skill}, per mastery {first DWORD of the
+// reference mastery, level}.
+void AQ_CharDataSelector_WriteSkills(ServerFramework::CMassiveMsg* pMsg, CDBRecordList* pSkills,
+                                     CDBRecordList* pMasteries);
+// Item_FormatDescription (0x469240): the console text of an item.
+void Item_FormatDescription(CInstanceItem* pItem, std::string* pstrOut);
 
 C_ASSERT(FIELD_OFFSET(AQ_CharDataSelector, m_strName) == 0x58);
 C_ASSERT(FIELD_OFFSET(AQ_CharDataSelector, m_strDesc) == 0x74);

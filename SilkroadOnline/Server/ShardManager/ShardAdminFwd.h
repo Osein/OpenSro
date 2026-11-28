@@ -75,3 +75,7 @@ void* ClientMgr_FindUserByCharName(const std::string& strCharName);
 // Provided by the main process group (CharName_IsValid 0x40f200 on the main process): the
 // character name check of the shard (characters and length).
 BOOL MainProcess_IsValidCharName(const std::string& strCharName);
+
+// Provided by the guild group (CGuildMgrCommon::FindGuild 0x40bf10 on the guild manager, then
+// the name of the guild): leaves strName unchanged when there is no such guild.
+void GuildManager_FindGuildName(int nGuildID, std::string& strName);
