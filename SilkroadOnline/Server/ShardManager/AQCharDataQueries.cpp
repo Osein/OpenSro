@@ -4,6 +4,8 @@
 
 #include <strsafe.h>
 
+#include <map>
+
 #include "BSLib/BSDebug.h"
 #include "ServerCommon/InstanceRecords.h"
 #include "ServerCommon/RefDataObj.h"
@@ -818,4 +820,208 @@ void Item_FormatDescription(CInstanceItem* pItem, std::string* pstrOut)
     pstrOut->append(strOptLevel, 0, std::string::npos);
     pstrOut->append(strVariance, 0, std::string::npos);
     pstrOut->append(strMagic, 0, std::string::npos);
+}
+
+// -------------------------------------------------------------------------------------------
+// Guild (target 8) and training camp (target 12)
+
+void AQ_CharDataSelector_WriteGuildInfo(CDBRecordList* pGuilds, CDBRecordList* pFortresses,
+                                        CMassiveMsg* pMsg, CDBRecordList* pMembers,
+                                        CDBRecordList* pAlliances)
+{
+    int nGuildID = 0;
+    std::string strDate;
+    if (!pGuilds->empty())
+    {
+        CInstanceGuild* pGuild = (CInstanceGuild*)pGuilds->front();
+        GM_FormatTimestamp(&strDate, &pGuild->FoundationDate);
+        nGuildID = pGuild->ID;
+        pMsg->Write(&nGuildID, 4);
+        WriteText(pMsg, pGuild->Name.c_str());
+        pMsg->Write(&pGuild->Lvl, 1);
+        pMsg->Write(&pGuild->GatheredSP, 4);
+        WriteText(pMsg, strDate.c_str());
+        WriteText(pMsg, pGuild->MasterCommentTitle.c_str());
+        WriteText(pMsg, pGuild->MasterComment.c_str());
+        // The siege fortress of the guild, 0 for none.
+        int nNoFortress = 0;
+        const int* pnFortressID = &nNoFortress;
+        if (!pFortresses->empty())
+            pnFortressID = &((CInstanceSiegeFortress*)pFortresses->front())->FortressID;
+        pMsg->Write(pnFortressID, 4);
+        pMsg->Write(&pGuild->CurCrestRev, 4);
+        pMsg->Write(&pGuild->LastCrestRev, 4);
+        pMsg->Write(&pGuild->MercenaryAttr, 1);
+    }
+
+    DWORD dwMembers = (DWORD)pMembers->size();
+    pMsg->Write(&dwMembers, 4);
+    for (CDBRecordList::iterator it = pMembers->begin(); it != pMembers->end(); ++it)
+    {
+        CInstanceGuildMember* pMember = (CInstanceGuildMember*)*it;
+        GM_FormatTimestamp(&strDate, &pMember->JoinDate);
+        WriteText(pMsg, pMember->CharName.c_str());
+        pMsg->Write(&pMember->CharLevel, 1);
+        pMsg->Write(&pMember->GP_Donation, 4);
+        WriteText(pMsg, strDate.c_str());
+        pMsg->Write(&pMember->MemberClass, 1);
+        pMsg->Write(&pMember->Permission, 4);
+        // The nickname with its string length.
+        WORD wLen = (WORD)pMember->Nickname.size();
+        pMsg->Write(&wLen, 2);
+        if (wLen)
+            pMsg->Write(pMember->Nickname.c_str(), wLen);
+    }
+
+    if (pAlliances->empty())
+        return;
+    // The other guilds of the alliance, read one by one from _Guild.
+    CDBRecordList listAllies;
+    char szClause[0xC00];
+    memset(szClause, 0, sizeof(szClause));
+    CInstanceAlliedClan* pAlliance = (CInstanceAlliedClan*)pAlliances->front();
+    CDBTable* pGuildTable = GetTable(SHARD_TABLE_GUILD);
+    DWORD dwAllies = 0;
+    for (int i = 0; i < 8; ++i)
+    {
+        if (pAlliance->Ally[i] && pAlliance->Ally[i] != nGuildID)
+            ++dwAllies;
+    }
+    pMsg->Write(&dwAllies, 4);
+    for (int i = 0; i < 8; ++i)
+    {
+        if (!pAlliance->Ally[i] || pAlliance->Ally[i] == nGuildID)
+            continue;
+        if (StringCchPrintfA(szClause, 0xC00, "WHERE ID = %d", pAlliance->Ally[i]) != S_OK)
+            BSAssertFail();
+        // The result of the select is not checked.
+        pGuildTable->SelectWhere(szClause, 4, &listAllies, 1);
+        for (CDBRecordList::iterator it = listAllies.begin(); it != listAllies.end(); ++it)
+        {
+            CInstanceGuild* pAlly = (CInstanceGuild*)*it;
+            GM_FormatTimestamp(&strDate, &pAlly->FoundationDate);
+            WriteText(pMsg, pAlly->Name.c_str());
+            pMsg->Write(&pAlly->Lvl, 1);
+            WriteText(pMsg, strDate.c_str());
+            pMsg->Write(&pAlly->GatheredSP, 4);
+        }
+        DB_FreeRecordList(&listAllies, pGuildTable);
+    }
+}
+
+bool AQ_CharDataSelector::QueryGuild()
+{
+    // BUG(SM-351): the selected records are never returned to their tables.
+    CDBRecordList listGuilds;
+    CDBRecordList listMembers;
+    CDBRecordList listAlliances;
+    CDBRecordList listFortresses;
+    m_byResult = AQ_DB_LoadGuildData(&listAlliances, &listFortresses, m_strName, &listGuilds,
+                                     &listMembers);
+    if (m_byResult != AQ_RESULT_OK)
+        return false;
+    CMassiveMsg* pMsg = m_pResponse;
+    BYTE byOK = 1;
+    pMsg->Write(&byOK, 1);
+    pMsg->Write(&m_byQueryTarget, 1);
+    AQ_CharDataSelector_WriteGuildInfo(&listGuilds, &listFortresses, m_pResponse, &listMembers,
+                                       &listAlliances);
+    return true;
+}
+
+void AQ_CharDataSelector_WriteTrainingCampInfo(CDBRecordList* pBuffs, CDBRecordList* pCamps,
+                                               CMassiveMsg* pMsg, CDBRecordList* pMembers)
+{
+    if (pCamps->empty())
+        return;
+    CInstanceTrainingCamp* pCamp = (CInstanceTrainingCamp*)pCamps->front();
+    std::string strCreation;
+    std::string strEvaluation;
+    GM_FormatTimestamp(&strCreation, &pCamp->CreationDate);
+    GM_FormatTimestamp(&strEvaluation, &pCamp->LatestEvaluationDate);
+    pMsg->Write(&pCamp->ID, 4);
+    WriteText(pMsg, strCreation.c_str());
+    pMsg->Write(&pCamp->Rank, 1);
+    pMsg->Write(&pCamp->GraduateCount, 4);
+    pMsg->Write(&pCamp->EvaluationPoint, 4);
+    WriteText(pMsg, strEvaluation.c_str());
+    WriteText(pMsg, pCamp->CommentTitle.c_str());
+    WriteText(pMsg, pCamp->Comment.c_str());
+
+    // The member names by character ID, for the buffs.
+    DWORD dwMembers = (DWORD)pMembers->size();
+    pMsg->Write(&dwMembers, 4);
+    std::string strJoin;
+    std::map<DWORD, std::string> mapNames;
+    for (CDBRecordList::iterator it = pMembers->begin(); it != pMembers->end(); ++it)
+    {
+        CInstanceTrainingCampMember* pMember = (CInstanceTrainingCampMember*)*it;
+        GM_FormatTimestamp(&strJoin, &pMember->JoinDate);
+        WriteText(pMsg, pMember->CharName.c_str());
+        WriteText(pMsg, strJoin.c_str());
+        pMsg->Write(&pMember->MemberClass, 1);
+        pMsg->Write(&pMember->CharJoinedLevel, 1);
+        pMsg->Write(&pMember->CharCurLevel, 1);
+        pMsg->Write(&pMember->CharMaxLevel, 1);
+        pMsg->Write(&pMember->HonorPoint, 4);
+        mapNames.insert(std::make_pair((DWORD)pMember->CharID, pMember->CharName));
+    }
+
+    DWORD dwBuffs = (DWORD)pBuffs->size();
+    pMsg->Write(&dwBuffs, 4);
+    std::string strRecipient;
+    std::string strDonor;
+    std::string strStart;
+    for (CDBRecordList::iterator it = pBuffs->begin(); it != pBuffs->end(); ++it)
+    {
+        CInstanceTrainingCampBuffStatus* pBuff = (CInstanceTrainingCampBuffStatus*)*it;
+        GM_FormatTimestamp(&strStart, &pBuff->StartingTime);
+        if (!pBuff->RecipientCharID)
+            BSAssertFail();
+        // A recipient that is no member asserts, then the checked iterator throws.
+        std::map<DWORD, std::string>::iterator itName =
+            mapNames.find((DWORD)pBuff->RecipientCharID);
+        if (itName == mapNames.end())
+            BSAssertFail();
+        strRecipient = itName->second;
+        if (pBuff->DonorCharID)
+        {
+            itName = mapNames.find((DWORD)pBuff->DonorCharID);
+            if (itName == mapNames.end())
+            {
+                BSAssertFail();
+                strDonor.assign("", (size_t)0);
+            }
+            else
+            {
+                strDonor = itName->second;
+            }
+        }
+        else
+        {
+            strDonor.assign("", (size_t)0);
+        }
+        WriteText(pMsg, strRecipient.c_str());
+        WriteText(pMsg, strDonor.c_str());
+        WriteText(pMsg, strStart.c_str());
+        pMsg->Write(&pBuff->RemainBuffPoint, 4);
+        pMsg->Write(&pBuff->BuffType, 1);
+    }
+}
+
+bool AQ_CharDataSelector::QueryTrainingCamp()
+{
+    // BUG(SM-351): the selected records are never returned to their tables.
+    CDBRecordList listCamps;
+    CDBRecordList listMembers;
+    CDBRecordList listBuffs;
+    m_byResult = AQ_DB_LoadCharTrainingCamp(&listMembers, &listBuffs, m_strName, &listCamps);
+    if (m_byResult != AQ_RESULT_OK)
+        return false;
+    CMassiveMsg* pMsg = m_pResponse;
+    BYTE byOK = 1;
+    pMsg->Write(&byOK, 1);
+    pMsg->Write(&m_byQueryTarget, 1);
+    AQ_CharDataSelector_WriteTrainingCampInfo(&listBuffs, &listCamps, m_pResponse, &listMembers);
+    return true;
 }

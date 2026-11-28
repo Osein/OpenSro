@@ -73,6 +73,16 @@ void AQ_CharDataSelector_WriteItemDetailRows(ServerFramework::CMassiveMsg* pMsg,
 // 0x46d3f0: the _OpenMarket rows.
 void AQ_CharDataSelector_WriteOpenMarketRows(ServerFramework::CMassiveMsg* pMsg,
                                              CDBRecordList* pList);
+// 0x46b130: the guild {ID, name, level, SP, foundation date, comment title and text, fortress
+// ID, crest revisions, mercenary attribute}, its members and the other guilds of its alliance
+// (read from _Guild one by one).
+void AQ_CharDataSelector_WriteGuildInfo(CDBRecordList* pGuilds, CDBRecordList* pFortresses,
+                                        ServerFramework::CMassiveMsg* pMsg,
+                                        CDBRecordList* pMembers, CDBRecordList* pAlliances);
+// 0x46a7f0: the camp, its members and the buffs of the members (recipient and donor by name).
+void AQ_CharDataSelector_WriteTrainingCampInfo(CDBRecordList* pBuffs, CDBRecordList* pCamps,
+                                               ServerFramework::CMassiveMsg* pMsg,
+                                               CDBRecordList* pMembers);
 // Item_FormatDescription (0x469240): the console text of an equipment item (else empty):
 // gender, option level, variance and the magic options.
 void Item_FormatDescription(CInstanceItem* pItem, std::string* pstrOut);
