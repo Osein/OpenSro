@@ -12,6 +12,7 @@
 #include "ServerCommon/ReferenceData.h"
 #include "ServerFramework/ServerDataExtern.h"
 #include "ShardManager/AQDBLoaders.h"
+#include "ShardManager/Guild.h"
 #include "ShardManager/ShardAdminFwd.h"
 
 using ServerFramework::CMassiveMsg;
@@ -115,7 +116,11 @@ bool AQ_CharDataSelector::QueryCharInfo()
     m_pResponse->WriteString(strEmpty.c_str());
     std::string strGuild;
     if (pPC->GuildID)
-        GuildManager_FindGuildName(pPC->GuildID, strGuild);
+    {
+        CGuildCommon* pGuild = GetSingleton_CGuildManager()->FindGuild(pPC->GuildID);
+        if (pGuild)
+            pGuild->GetName(strGuild);
+    }
     m_pResponse->WriteString(strGuild.c_str());
 
     if (StringCchPrintfA(szClause, 0xC00, "WHERE CharID = %d", pPC->CharID) != S_OK)

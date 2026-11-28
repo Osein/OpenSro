@@ -10,7 +10,9 @@
 #include "ServerFramework/ServerProcess.h"
 #include "ShardManager/AQBase.h"
 #include "ShardManager/AdminQueryJobs.h"
+#include "ShardManager/Guild.h"
 #include "ShardManager/ShardAdminFwd.h"
+#include "ShardManager/TrainingCamp.h"
 
 using ServerFramework::CMassiveMsg;
 
@@ -1084,13 +1086,15 @@ bool CCharDataEditor::BuildReply()
     {
         if (byType == 15 || byType == 16 || byType == 17 || byType == 18)
         {
-            if (TrainingCampManager_Reload() == 1)
+            if (!g_pTrainingCampManager)
+                BSAssertFail();
+            if (g_pTrainingCampManager->Reload() == TRUE)
                 LogPrintf(0, "TrainingCamp Information Reloaded!!!");
         }
         return true;
     }
 
-    if (GuildManager_Reload() == 1)
+    if (GetSingleton_CGuildManager()->Reset() == TRUE)
         LogPrintf(0, "Guild Information Reloaded!!!");
     return true;
 }

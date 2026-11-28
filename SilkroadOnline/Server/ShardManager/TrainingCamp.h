@@ -260,8 +260,9 @@ public:
 
     // 0x457190: the camps, the character map and the start-up honor ranking.
     virtual BOOL Load();                                                    // 1
-    // 0x4572a0: everything again (the process exits when that fails), 0x3C80 subtype 8.
-    virtual void Reload();                                                  // 3
+    // 0x4572a0: everything again (the process exits when that fails), 0x3C80 subtype 8. Always
+    // TRUE.
+    virtual BOOL Reload();                                                  // 3
     // 0x457340: a CTrainingCamp for the record, NULL when it cannot be loaded.
     virtual CTrainingCampCommon* AddCamp(CInstanceTrainingCamp* pCamp);    // 4
 

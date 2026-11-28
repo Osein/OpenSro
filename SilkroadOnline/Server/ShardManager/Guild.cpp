@@ -763,7 +763,7 @@ BOOL CGuildManager::Load()
     return CGuildMgrCommon::Load();
 }
 
-void CGuildManager::Reset()
+BOOL CGuildManager::Reset()
 {
     // MgrCommon_Reset_441900 (shared with the training camp manager)
     Clear();
@@ -773,6 +773,7 @@ void CGuildManager::Reset()
     if (!g_pMainProcess)
         BSAssertFail();
     g_pMainProcess->BroadcastToAllGameServers(pMsg);
+    return TRUE;
 }
 
 CGuildCommon* CGuildManager::CreateGuild(CInstanceGuild* pRecord)

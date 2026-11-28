@@ -104,10 +104,6 @@ C_ASSERT(sizeof(CCharDataEditor) == 0x120);
 // Provided by SM_main3 (BuildSMCLog 0x48bb10): the _ADDLOGCHAR / _ADDLOGITEM statement of an
 // edit into pszOut (0x80 bytes).
 bool BuildSMCLog(const char* pszDesc, CCharDataEditor* pEditor, char* pszOut);
-// Provided by the guild group: vf03 of the guild manager (0x8A8924, asserted) and of the
-// training camp manager (GetSingleton_CTrainingCampManager 0x40ba50): reload, 1 on success.
-int GuildManager_Reload();
-int TrainingCampManager_Reload();
 // 0x4663e0 (CBaseCharDataEditor_Helper_4663E0): result 14 and "User In Game!! - CharEdit"
 // when the character is in game.
 bool CharDataEditor_CheckNotInGame(CBaseCharDataEditor* pEditor, const std::string& strName);

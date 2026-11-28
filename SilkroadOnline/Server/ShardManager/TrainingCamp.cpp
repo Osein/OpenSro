@@ -518,7 +518,7 @@ BOOL CTrainingCampManager::Load()
     return TRUE;
 }
 
-void CTrainingCampManager::Reload()
+BOOL CTrainingCampManager::Reload()
 {
     m_mapCharCamp.clear();
     if (!ClearAndLoad())
@@ -527,6 +527,7 @@ void CTrainingCampManager::Reload()
     if (!g_pMainProcess)
         BSAssertFail();
     g_pMainProcess->BroadcastToAllGameServers(pMsg);
+    return TRUE;
 }
 
 CTrainingCampCommon* CTrainingCampManager::AddCamp(CInstanceTrainingCamp* pRecord)

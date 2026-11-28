@@ -4,6 +4,7 @@
 #include <string>
 
 #include "BSLib/DB/Database.h"
+#include "ShardManager/SocialExtern.h"
 
 // Shard DB readers of the character data queries (AQ_CharDataSelector). The loaders fill
 // record lists through the registered tables of the shard DB (connection 4) and return a
@@ -11,7 +12,8 @@
 // 7 select failed, 13 the item rows do not match the slot rows. On a failed select the list
 // is freed.
 
-// Registered tables of the shard DB used here (index in the table list).
+// Registered tables of the shard DB used here (index in the table list; the training camp
+// tables SHARD_TABLE_TRAINING_CAMP* are those of SocialExtern.h).
 enum
 {
     SHARD_TABLE_INVENTORY           = 2,
@@ -23,9 +25,6 @@ enum
     SHARD_TABLE_GUILD               = 11,
     SHARD_TABLE_GUILD_MEMBER        = 12,
     SHARD_TABLE_ALLIANCE            = 13,
-    SHARD_TABLE_TRAINING_CAMP       = 0x16,
-    SHARD_TABLE_TRAINING_CAMP_MEMBER = 0x17,
-    SHARD_TABLE_TRAINING_CAMP_BUFF  = 0x19,
     SHARD_TABLE_GUILD_CHEST         = 0x20,
     SHARD_TABLE_SIEGE_FORTRESS      = 0x25,
     SHARD_TABLE_SIEGE_FORTRESS_REQUEST = 0x28,

@@ -7,6 +7,7 @@
 #include "ServerFramework/ServerDataExtern.h"
 #include "ShardManager/AQDBLoaders.h"
 #include "ShardManager/AQLogSelector.h"
+#include "ShardManager/Guild.h"
 #include "ShardManager/ShardAdminFwd.h"
 
 using ServerFramework::CMassiveMsg;
@@ -96,9 +97,9 @@ void AQ_SiegeDataSelector::WriteFortressData(CDBRecordList* pFortresses,
         std::string strGuild;
         if (pFortress->GuildID)
         {
-            void* pGuild = GuildManager_FindGuild(pFortress->GuildID);
+            CGuildCommon* pGuild = GetSingleton_CGuildManager()->FindGuild(pFortress->GuildID);
             if (pGuild)
-                Guild_GetName(pGuild, strGuild);
+                pGuild->GetName(strGuild);
         }
         AQ_WriteText(pMsg, strGuild.size() ? strGuild.c_str() : "Not occupied yet");
         pMsg->Write(&pFortress->TaxRatio, 2);
@@ -159,13 +160,15 @@ void AQ_SiegeDataSelector::WriteFortressData(CDBRecordList* pFortresses,
     for (it = pRequests->begin(); it != pRequests->end(); ++it)
     {
         CInstanceSiegeFortressRequest* pRequest = (CInstanceSiegeFortressRequest*)*it;
+        // The guild manager is asserted before the GuildID check here.
+        CGuildManager* pGuildMgr = GetSingleton_CGuildManager();
         if (!pRequest->GuildID)
             continue;
-        void* pGuild = GuildManager_FindGuild(pRequest->GuildID);
+        CGuildCommon* pGuild = pGuildMgr->FindGuild(pRequest->GuildID);
         if (!pGuild)
             continue;
         std::string strGuild;
-        Guild_GetName(pGuild, strGuild);
+        pGuild->GetName(strGuild);
         pMsg->Write(&pRequest->RequestType, 1);
         AQ_WriteText(pMsg, strGuild.c_str());
     }

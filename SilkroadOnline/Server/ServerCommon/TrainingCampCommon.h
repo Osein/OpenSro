@@ -259,7 +259,8 @@ public:
     virtual BOOL Load();                                                    // 1
     // 0x45eb30: clears and deletes every camp.
     virtual void Clear();                                                   // 2
-    virtual void Reload() = 0;                                              // 3
+    // Reloads everything; TRUE (the shard manager's vf03 always returns 1).
+    virtual BOOL Reload() = 0;                                              // 3
     virtual CTrainingCampCommon* AddCamp(CInstanceTrainingCamp* pCamp) = 0; // 4
 
     // MgrCommon_Reset_441900 (0x441900): Clear, then Load.

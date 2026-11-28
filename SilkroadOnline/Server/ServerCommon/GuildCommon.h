@@ -162,6 +162,12 @@ public:
     {
         return Guild_GetRecordID(m_pRecord);
     }
+    // Guild_GetName (0x4409a0): the name of the record into strName (unchanged without one).
+    void GetName(std::string& strName) const
+    {
+        if (m_pRecord)
+            strName.assign(m_pRecord->Name, 0, std::string::npos);
+    }
     // Guild_GetLevel_4409C0 (0x4409c0)
     BYTE GetLevel() const
     {
@@ -341,7 +347,8 @@ public:
     // CGuildMgrCommon::vf02 (0x4416e0, GuildCommonShard.cpp): clears and deletes the guilds,
     // releases alliance and war records.
     virtual void Clear();                                                   // 2
-    virtual void Reset() = 0;                                               // 3
+    // Reloads everything; TRUE (the shard manager's CGuildManager::vf03 always returns 1).
+    virtual BOOL Reset() = 0;                                               // 3
     virtual CGuildCommon* CreateGuild(CInstanceGuild* pRecord) = 0;         // 4
     virtual BOOL AddHostileGuilds(CInstanceGuildWar* pWar) = 0;             // 5
     virtual BOOL RemoveHostileGuilds(CInstanceGuildWar* pWar) = 0;          // 6

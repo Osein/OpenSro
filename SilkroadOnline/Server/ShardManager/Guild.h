@@ -163,8 +163,8 @@ public:
 
     virtual BOOL Load();                                                    // 1 (0x438050)
     // CGuildManager::vf03 (0x438060): reload (exits the process when it fails) and tell the
-    // game servers (0x38F5 subtype 32).
-    virtual void Reset();                                                   // 3
+    // game servers (0x38F5 subtype 32). Always TRUE.
+    virtual BOOL Reset();                                                   // 3
     // CGuildManager::vf04 (0x4380c0)
     virtual CGuildCommon* CreateGuild(CInstanceGuild* pRecord);             // 4
     // CGuildManager::vf05 / vf06 (0x43c260 / 0x43c2c0): the hostile entries of both guilds;

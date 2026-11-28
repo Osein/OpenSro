@@ -29,10 +29,6 @@ BOOL CharMgr_IsReady();
 class AQ_CharDataEditor2;
 void ShardIntegrate_OnQueryResult(AQ_CharDataEditor2* pJob, BOOL bSucceeded);
 
-// Provided by the guild group (CGuildMgrCommon::FindGuild 0x40bf10 on the guild manager, then
-// the name of the guild): leaves strName unchanged when there is no such guild.
-void GuildManager_FindGuildName(int nGuildID, std::string& strName);
-
 // Provided by SM_world3 (ShardSchedule.h: CShard_ScheduleManager, the static object
 // g_ShardScheduleManager 0x8a7b24, and sScheduleRow::Copy 0x663560). Only the calls of the
 // schedule jobs are declared.
@@ -48,11 +44,6 @@ void ShardScheduleManager_RemoveSchedule(const NewSchedule::SCHEDULE_DATA* pData
 // sScheduleRow::Copy (0x663560).
 NewSchedule::SCHEDULE_DATA* CopyScheduleRow(const NewSchedule::SCHEDULE_DATA* pSrc,
                                             NewSchedule::SCHEDULE_DATA* pDst);
-
-// Provided by the guild group: CGuildMgrCommon::FindGuild (0x40bf10) on the guild manager
-// (0x8A8924, asserted), NULL when there is no such guild; the name of a guild (0x4409a0).
-void* GuildManager_FindGuild(int nGuildID);
-void Guild_GetName(void* pGuild, std::string& strName);
 
 // Provided by the main process group: *(g_pMainProcess + 0x42308), the task of the DB jobs
 // (AQ_ServerEventLog requests).
