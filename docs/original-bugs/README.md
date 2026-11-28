@@ -224,3 +224,28 @@ down), **wrong** (wrong result or lost data), **minor** (cosmetic, leak, dead co
 | [SM-275](SM-275.md) | SR_ShardManager training camps | minor | Training camp honor points are cut to one byte |
 | [SM-276](SM-276.md) | SR_ShardManager training camps | minor | A failed camp disband removes the members from the character map |
 | [SM-277](SM-277.md) | SR_ShardManager votes | major | A reused vote keeps the tally of the previous vote |
+| [SM-300](SM-300.md) | SR_ShardManager admin queries | minor | The association reputation statement is used as a format string |
+| [SM-301](SM-301.md) | SR_ShardManager admin queries | major | A character data request with an unknown mode calls through a NULL editor |
+| [SM-302](SM-302.md) | SR_ShardManager shard maintainer | minor | A failed revive statement is reported as a restored character |
+| [SM-303](SM-303.md) | SR_ShardManager shard maintainer | major | Reviving a character can drop another character from the delete schedule |
+| [SM-304](SM-304.md) | SR_ShardManager one-by-one processor | major | The job timeout check steps from an erased map node |
+| [SM-305](SM-305.md) | SR_ShardManager one-by-one processor | minor | Silk history queries leak their message in the group 3 divisions |
+| [SM-306](SM-306.md) | SR_ShardManager one-by-one processor | minor | A repeated silk history key leaks its request data |
+| [SM-307](SM-307.md) | SR_ShardManager admin queries | minor | The statement jobs use their statement as a format string |
+| [SM-308](SM-308.md) | SR_ShardManager admin queries | major | Statement jobs put console strings into SQL unchecked |
+| [SM-309](SM-309.md) | SR_ShardManager admin queries | minor | Record lists freed through the wrong table |
+| [SM-310](SM-310.md) | SR_ShardManager admin queries | minor | The character information query leaks its records |
+| [SM-311](SM-311.md) | SR_ShardManager admin queries | minor | Skill page looks reference skills up with lower_bound |
+| [SM-312](SM-312.md) | SR_ShardManager admin queries | minor | The unknown server event type log misses an argument |
+| [SM-313](SM-313.md) | SR_ShardManager admin queries | minor | The log query jobs leak the selected records |
+| [SM-314](SM-314.md) | SR_ShardManager admin queries | major | Standard shard schedules copy their parameter text with a 256-byte limit |
+| [SM-315](SM-315.md) | SR_ShardManager admin queries | minor | Log job descriptions grow with every reuse of the job object |
+| [SM-316](SM-316.md) | SR_ShardManager admin queries | minor | The siege data answer counts requests it does not write |
+| [SM-317](SM-317.md) | SR_ShardManager admin queries | minor | The rent information query leaks its records |
+| [SM-318](SM-318.md) | SR_ShardManager admin queries | minor | A cut SMC log statement of the character data editor is still executed |
+| [SM-340](SM-340.md) | SR_ShardManager admin queries | major | A timed job edit with an unknown operation runs an uninitialised statement |
+| [SM-341](SM-341.md) | SR_ShardManager admin queries | major | Item edits put unchecked names from the item row into the statement |
+| [SM-350](SM-350.md) | SR_ShardManager admin queries | minor | Some magic options replace the item description built so far |
+| [SM-351](SM-351.md) | SR_ShardManager admin queries | minor | The guild and training camp queries leak their records |
+| [SM-352](SM-352.md) | SR_ShardManager admin queries | minor | The pet query leaks records when an item query fails |
+| [SM-353](SM-353.md) | SR_ShardManager admin queries | minor | LoadPetItem frees the pet list through a NULL table |
