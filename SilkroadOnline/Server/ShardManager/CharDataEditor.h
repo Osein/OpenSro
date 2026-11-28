@@ -72,6 +72,10 @@ public:
     // {int error, ID, serial} and the description gets the new item or the error code.
     int OnQueryRow(DWORD dwQuery, DWORD dwUnused);
 
+    // 0x48b930: the log code of the edit type ("MCP", "MCN", ...; empty for the others) and of
+    // the item operation ("_D", "_A", "_M", "_G") in m_strEditType.
+    const char* GetEditTypeDesc();
+
 public:
     BYTE                m_byItemOp;     // +64  item / timed job operation (1 delete, 2 add,
                                         //      3 edit, 4 gold); 2: the statement creates an item
@@ -85,7 +89,7 @@ public:
     DWORD               m_dw8C;         // +8C  second DWORD of a rename request (unused)
     std::string         m_strOldName;   // +90  character rename
     std::string         m_strNewName;   // +AC
-    std::string         m_strC8;        // +C8
+    std::string         m_strEditType;  // +C8  log code of the edit (GetEditTypeDesc)
     std::string         m_strLogQuery;  // +E4  _ADDLOGCHAR / _ADDLOGITEM statement
     std::string         m_strEditDesc;  // +100 arguments of the edit for the SMC log
     DWORD               m_dw11C;        // +11C
@@ -101,9 +105,11 @@ C_ASSERT(FIELD_OFFSET(CCharDataEditor, m_strLogQuery) == 0xE4);
 C_ASSERT(FIELD_OFFSET(CCharDataEditor, m_strEditDesc) == 0x100);
 C_ASSERT(sizeof(CCharDataEditor) == 0x120);
 
-// Provided by SM_main3 (BuildSMCLog 0x48bb10): the _ADDLOGCHAR / _ADDLOGITEM statement of an
-// edit into pszOut (0x80 bytes).
-bool BuildSMCLog(const char* pszDesc, CCharDataEditor* pEditor, char* pszOut);
+// BuildSMCLog (0x48bb10, CCharDataEditor::Execute): the _ADDLOGCHAR (character edits) or
+// _ADDLOGITEM (item edits 9, 10, 11, 19) statement of an edit into pszOut (0x80 bytes); edit
+// types 5, 8 and > 20 leave pszOut unchanged. A failure is only logged (the return register
+// of the original holds no result).
+void BuildSMCLog(const char* pszDesc, CCharDataEditor* pEditor, char* pszOut);
 // 0x4663e0 (CBaseCharDataEditor_Helper_4663E0): result 14 and "User In Game!! - CharEdit"
 // when the character is in game.
 bool CharDataEditor_CheckNotInGame(CBaseCharDataEditor* pEditor, const std::string& strName);

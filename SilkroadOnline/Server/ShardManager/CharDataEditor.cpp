@@ -1013,6 +1013,73 @@ bool CCharDataEditor::Execute()
     return true;
 }
 
+const char* CCharDataEditor::GetEditTypeDesc()
+{
+    // The codes of the edit types (table 0x48baac); NULL: empty.
+    static const char* const s_apszEditType[21] =
+    {
+        "MCP",  // 0 position
+        "MCN",  // 1 character rename
+        "DEC",  // 2 character deletion
+        "MCS",  // 3 stats
+        "MCG",  // 4 guild
+        NULL,   // 5
+        "MCK",  // 6 PK data
+        "MCO",  // 7 trade job
+        NULL,   // 8
+        "MII",  // 9 item edits
+        "MCI",  // 10
+        "MGI",  // 11
+        NULL,   // 12 timed job deletion
+        "MGN",  // 13 guild member nickname
+        "MCO",  // 14 trade job nickname
+        "MTC",  // 15 training camp edit
+        "DTC",  // 16 training camp deletion
+        "MCM",  // 17 camp member edit
+        "DCM",  // 18 camp member deletion
+        "MAI",  // 19 item edit
+        "MCC",  // 20 collection book
+    };
+    // The item operation suffixes (m_byItemOp 1 .. 4).
+    static const char* const s_apszItemOp[4] = { "_D", "_A", "_M", "_G" };
+
+    // The other types and operations add an empty text.
+    m_strEditType.clear();
+    if (m_byQueryType < 21 && s_apszEditType[m_byQueryType])
+        m_strEditType.assign(s_apszEditType[m_byQueryType]);
+    if (m_byItemOp >= 1 && m_byItemOp <= 4)
+        m_strEditType.append(s_apszItemOp[m_byItemOp - 1], 2);
+    return m_strEditType.c_str();
+}
+
+void BuildSMCLog(const char* pszDesc, CCharDataEditor* pEditor, char* pszOut)
+{
+    HRESULT hr;
+    switch (pEditor->m_byQueryType)
+    {
+    case 0: case 1: case 2: case 3: case 4: case 6: case 7: case 12: case 13: case 14:
+    case 15: case 16: case 17: case 18: case 20:
+        hr = StringCchPrintfA(pszOut, 0x80, "{CALL _ADDLOGCHAR (%d,%u,%d,%d,'%s','%s')}", 0, 199,
+                              0, 0, pEditor->GetEditTypeDesc(), pszDesc);
+        break;
+    case 9: case 10: case 11: case 19:
+        hr = StringCchPrintfA(pszOut, 0x80,
+                              "{CALL _ADDLOGITEM (%d,%d,%I64d,%d, %u,%u,%u,%u, '%s','%s', %I64d)}",
+                              0, pEditor->m_dwRefItemID, pEditor->m_qwSerial,
+                              pEditor->m_dwRequestID, 0, 99, 255, pEditor->m_bySlot,
+                              pEditor->GetEditTypeDesc(), pszDesc, (__int64)0);
+        break;
+    default:
+        return;
+    }
+    // BUG(SM-318): the cut statement of a failed format stays in pszOut and is executed.
+    if (hr != S_OK)
+    {
+        LogPrintf(0x2000000, "BuildSMCLog() : failed to make string! [query_target: %d, desc: %s]",
+                  pEditor->m_byQueryType, pszDesc);
+    }
+}
+
 int CCharDataEditor::OnQueryRow(DWORD dwQuery, DWORD)
 {
     AQ_DBQuery* pQuery = (AQ_DBQuery*)(DWORD_PTR)dwQuery;
