@@ -1025,3 +1025,230 @@ bool AQ_CharDataSelector::QueryTrainingCamp()
     AQ_CharDataSelector_WriteTrainingCampInfo(&listBuffs, &listCamps, m_pResponse, &listMembers);
     return true;
 }
+
+// -------------------------------------------------------------------------------------------
+// Pets (targets 9 and 10)
+
+enum
+{
+    SHARD_TABLE_CHAR_COS = 7,
+};
+
+BOOL AQ_CharDataSelector::LoadPetItem(CDBRecordList* pItems, CDBRecordList* pCOS, WORD* pwCount)
+{
+    size_t nOldCount = pCOS->size();
+    CDBRecordList listRow;
+    CDBTable* pCOSTable = GetTable(SHARD_TABLE_CHAR_COS);
+    if (!pCOSTable)
+    {
+        BSAssertFail();
+        // BUG(SM-353): the pet list is freed through the missing (NULL) table.
+        DB_FreeRecordList(pCOS, NULL);
+        return FALSE;
+    }
+
+    char szClause[0xC00];
+    for (CDBRecordList::iterator it = pItems->begin(); it != pItems->end(); ++it)
+    {
+        CInstanceItem* pItem = (CInstanceItem*)*it;
+        pItem->ResolveRefObj();
+        RefObjCommonRow* pRef = pItem->m_pRefObj;
+        if (!pRef)
+            BSAssertFail();
+        // Pet summon items (item 3/2/1) carry the COS ID in Data.
+        if (!RefTypeID_Is(pRef->TypeID, 0, 3, 2, 1) || !pItem->Data)
+            continue;
+        if (StringCchPrintfA(szClause, 0xC00, "WHERE ID = %d", pItem->Data) != S_OK)
+        {
+            BSAssertFail();
+            DB_FreeRecordList(pCOS, pCOSTable);
+            return FALSE;
+        }
+        if (!pCOSTable->SelectWhere(szClause, 4, &listRow, 0))
+        {
+            BSAssertFail();
+            DB_FreeRecordList(pCOS, pCOSTable);
+            DB_FreeRecordList(&listRow, pCOSTable);
+            return FALSE;
+        }
+        if (listRow.size() != 1)
+            BSAssertFail();
+        if (!listRow.size())
+        {
+            DB_FreeRecordList(pCOS, pCOSTable);
+            DB_FreeRecordList(&listRow, pCOSTable);
+            return FALSE;
+        }
+        pCOS->push_back(listRow.front());
+        listRow.clear();
+    }
+    *pwCount = (WORD)(pCOS->size() - nOldCount);
+    return TRUE;
+}
+
+bool AQ_CharDataSelector::QueryPetDetail()
+{
+    int nCharID = AQ_DB_GetCharIDByName(m_strName);
+    int nJID = nCharID ? AQ_DB_GetJIDByCharName(m_strName) : 0;
+    if (!nJID)
+    {
+        m_byResult = AQ_RESULT_NOT_FOUND;
+        return false;
+    }
+
+    CMassiveMsg* pMsg;
+    BYTE byOK = 1;
+    if (m_byQueryTarget == 10)
+    {
+        // The items in the inventory of the pet m_dwTargetID.
+        int nCOSID = (int)m_dwTargetID;
+        CDBTable* pSlotTable = GetTable(SHARD_TABLE_INV_COS);
+        if (!pSlotTable)
+            BSAssertFail();
+        char szQuery[0xC00];
+        StringCchPrintfA(szQuery, 0xC00,
+                "SELECT SLOT FROM _INVCOS WHERE COSID=%d AND ItemID<>0 AND ItemID IS NOT NULL "
+                "ORDER BY Slot ASC",
+                nCOSID);
+        std::string strSlotQuery(szQuery);
+        CDBRecordList listSlots;
+        if (!pSlotTable->SelectCustom(strSlotQuery, 4, &listSlots, 0))
+        {
+            LogPrintf(0x1000000, "Pet Detail Information Inventory ItemSlot Query Failed!!");
+            DB_FreeRecordList(&listSlots, pSlotTable);
+            return false;
+        }
+        CDBRecordList listItems;
+        CDBTable* pItemTable = GetTable(SHARD_TABLE_ITEMS);
+        if (!pItemTable)
+            BSAssertFail();
+        if (listSlots.size())
+        {
+            StringCchPrintfA(szQuery, 0xC00,
+                    "SELECT IT.* FROM _InvCOS INV JOIN _ITEMS IT ON INV.ItemID=IT.ID64 "
+                    "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tWHERE INV.COSID=%d AND INV.ItemID IS NOT NULL "
+                    "AND INV.ItemID<>0 ORDER BY INV.Slot ASC",
+                    nCOSID);
+            std::string strItemQuery(szQuery);
+            if (!pItemTable->SelectCustom(strItemQuery, 1, &listItems, 0))
+            {
+                LogPrintf(0x1000000, "Pet Detail Information Item Query Failed!!");
+                DB_FreeRecordList(&listSlots, pSlotTable);
+                if (listItems.size())
+                    DB_FreeRecordList(&listItems, pItemTable);
+                return false;
+            }
+        }
+        pMsg = m_pResponse;
+        pMsg->Write(&byOK, 1);
+        pMsg->Write(&m_byQueryTarget, 1);
+        BYTE byCount = (BYTE)listItems.size();
+        m_pResponse->Write(&byCount, 1);
+        AQ_CharDataSelector_WriteItemList(&listItems, m_pResponse, &listSlots);
+        DB_FreeRecordList(&listSlots, pSlotTable);
+        DB_FreeRecordList(&listItems, pItemTable);
+        return true;
+    }
+    if (m_byQueryTarget != 9)
+        return true;
+
+    // The latest pet of the character, then the pets of the summon items in its inventory and
+    // in the storage of the account.
+    // BUG(SM-352): when an item query fails, the pet records (and, for the storage query, the
+    // inventory items) are never returned to their tables.
+    CDBTable* pCOSTable = GetTable(SHARD_TABLE_CHAR_COS);
+    if (!pCOSTable)
+    {
+        BSAssertFail();
+        return false;
+    }
+    CDBRecordList listCOS;
+    char szQuery[0xC00];
+    StringCchPrintfA(szQuery, 0xC00,
+            "SELECT TOP 1 * FROM _CHARCOS WHERE OWNERCHARID = %d ORDER BY ID DESC", nCharID);
+    std::string strQuery(szQuery);
+    if (!pCOSTable->SelectCustom(strQuery, 4, &listCOS, 0))
+    {
+        DB_FreeRecordList(&listCOS, pCOSTable);
+        return false;
+    }
+    if (listCOS.size() > 1)
+        BSAssertFail();
+    WORD wCOSCount = (WORD)listCOS.size();
+    WORD wInventoryCount = 0;
+    WORD wChestCount = 0;
+
+    CDBRecordList listInventory;
+    CDBRecordList listChest;
+    CDBTable* pItemTable = GetTable(SHARD_TABLE_ITEMS);
+    if (StringCchPrintfA(szQuery, 0xC00,
+            "SELECT IT.* FROM _Inventory INV JOIN _ITEMS IT ON INV.ItemID=IT.ID64 "
+            "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tWHERE INV.CharID=%d AND INV.ItemID<>0 ORDER BY "
+            "INV.Slot ASC",
+            nCharID) != S_OK)
+    {
+        BSAssertFail();
+        return false;
+    }
+    strQuery = szQuery;
+    if (!pItemTable->SelectCustom(strQuery, 4, &listInventory, 0))
+    {
+        if (listInventory.size())
+            DB_FreeRecordList(&listInventory, pItemTable);
+        return false;
+    }
+    if (StringCchPrintfA(szQuery, 0xC00,
+            "SELECT IT.* FROM _Chest C JOIN _ITEMS IT ON C.ItemID=IT.ID64 "
+            "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tWHERE C.UserJID=%d AND C.ItemID IS NOT NULL AND "
+            "C.ItemID<>0 ORDER BY C.Slot ASC",
+            nJID) != S_OK)
+    {
+        BSAssertFail();
+        return false;
+    }
+    strQuery = szQuery;
+    if (!pItemTable->SelectCustom(strQuery, 4, &listChest, 0))
+    {
+        if (listChest.size())
+            DB_FreeRecordList(&listChest, pItemTable);
+        return false;
+    }
+    if (!LoadPetItem(&listInventory, &listCOS, &wInventoryCount) ||
+        !LoadPetItem(&listChest, &listCOS, &wChestCount))
+    {
+        DB_FreeRecordList(&listCOS, pCOSTable);
+        DB_FreeRecordList(&listInventory, pItemTable);
+        DB_FreeRecordList(&listChest, pItemTable);
+        return false;
+    }
+
+    pMsg = m_pResponse;
+    pMsg->Write(&byOK, 1);
+    pMsg->Write(&m_byQueryTarget, 1);
+    pMsg = m_pResponse;
+    pMsg->Write(&wCOSCount, 2);
+    pMsg->Write(&wInventoryCount, 2);
+    pMsg->Write(&wChestCount, 2);
+    // Per pet {ID, RefCharID, name, state, level, experience, HGP, rent end time}.
+    std::string strRentEnd;
+    for (CDBRecordList::iterator it = listCOS.begin(); it != listCOS.end(); ++it)
+    {
+        CInstanceCOS* pPet = (CInstanceCOS*)*it;
+        pPet->ResolveRefObj();
+        pMsg = m_pResponse;
+        pMsg->Write(&pPet->ID, 4);
+        pMsg->Write(&pPet->RefCharID, 4);
+        GM_FormatTimestamp(&strRentEnd, &pPet->RentEndTime);
+        pMsg = m_pResponse;
+        pMsg->WriteString(pPet->CharName.c_str());
+        pMsg->Write(&pPet->State, 1);
+        pMsg->Write(&pPet->Lvl, 1);
+        pMsg->Write(&pPet->ExpOffset, 8);
+        pMsg->Write(&pPet->HGP, 2);
+        pMsg->WriteString(strRentEnd.c_str());
+    }
+    DB_FreeRecordList(&listCOS, pCOSTable);
+    DB_FreeRecordList(&listInventory, pItemTable);
+    DB_FreeRecordList(&listChest, pItemTable);
+    return true;
+}

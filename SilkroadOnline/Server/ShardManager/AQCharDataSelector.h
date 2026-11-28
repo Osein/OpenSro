@@ -33,9 +33,10 @@ public:
     // 0x46cfa0: the _RentItemInfo rows (table 0x34) of the item serial: 2 for serial 0, 7 when
     // the select fails (list freed), 1 otherwise.
     BYTE LoadByItemDBID(CDBRecordList* pList);
-    // 0x46c930: the rows of pItems that belong to the pet of pCOS; their count in *pwCount.
-    // FALSE when the lists do not match.
-    BOOL LoadPetItem(CDBRecordList* pItems, CDBRecordList* pCOS, WORD* pwCount);
+    // 0x46c930 (no this in the original): appends the _CharCOS row of every pet summon item
+    // of pItems to pCOS; the number added in *pwCount. FALSE (pCOS freed) when a row is missing
+    // or a select fails.
+    static BOOL LoadPetItem(CDBRecordList* pItems, CDBRecordList* pCOS, WORD* pwCount);
 
 public:
     BYTE                m_byQueryTarget;    // +50
