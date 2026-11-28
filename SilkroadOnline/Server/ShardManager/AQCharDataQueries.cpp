@@ -323,3 +323,288 @@ bool AQ_CharDataSelector::QuerySkills()
     DB_FreeRecordList(&listMasteries, pMasteryTable);
     return true;
 }
+
+// -------------------------------------------------------------------------------------------
+// Quests, item detail, rent info, collection book and open market (targets 5, 18, 20 .. 23)
+
+enum
+{
+    SHARD_TABLE_CHAR_QUEST          = 10,
+    SHARD_TABLE_BINDING_OPTION      = 0x33,
+    SHARD_TABLE_RENT_ITEM_INFO      = 0x34,
+    SHARD_TABLE_COLLECTION_BOOK     = 0x37,
+};
+
+bool AQ_CharDataSelector::QueryQuests()
+{
+    CDBTable* pTable = GetTable(SHARD_TABLE_CHAR_QUEST);
+    if (!pTable)
+        return false;
+    int nCharID = AQ_DB_GetCharIDByName(m_strName);
+    if (!nCharID)
+    {
+        m_byResult = AQ_RESULT_NO_CHAR;
+        return false;
+    }
+    char szClause[0xC00];
+    if (StringCchPrintfA(szClause, 0xC00, "WHERE CharID = %d", nCharID) != S_OK)
+        BSAssertFail();
+
+    CDBRecordList listQuests;
+    if (!pTable->SelectWhere(szClause, 4, &listQuests, 1) || !listQuests.size())
+    {
+        m_byResult = AQ_RESULT_NO_ROW;
+        DB_FreeRecordList(&listQuests, pTable);
+        return false;
+    }
+    CMassiveMsg* pMsg = m_pResponse;
+    WORD wCount = (WORD)listQuests.size();
+    BYTE byOK = 1;
+    pMsg->Write(&byOK, 1);
+    pMsg->Write(&m_byQueryTarget, 1);
+    pMsg->Write(&wCount, 2);
+    for (CDBRecordList::iterator it = listQuests.begin(); it != listQuests.end(); ++it)
+    {
+        CInstanceQuest* pQuest = (CInstanceQuest*)*it;
+        std::string strStart;
+        std::string strEnd;
+        pMsg = m_pResponse;
+        pMsg->Write(&pQuest->QuestID, 4);
+        pMsg->Write(&pQuest->Status, 1);
+        pMsg->Write(&pQuest->AchievementCount, 2);
+        GM_FormatTimestamp(&strStart, &pQuest->StartTime);
+        GM_FormatTimestamp(&strEnd, &pQuest->EndTime);
+        m_pResponse->WriteString(strStart.c_str());
+        m_pResponse->WriteString(strEnd.c_str());
+    }
+    DB_FreeRecordList(&listQuests, pTable);
+    return true;
+}
+
+void AQ_CharDataSelector_WriteItemDetailRows(CMassiveMsg* pMsg, CDBRecordList* pList)
+{
+    for (CDBRecordList::iterator it = pList->begin(); it != pList->end(); ++it)
+    {
+        CInstanceBindingOptionWithItem* pRow = (CInstanceBindingOptionWithItem*)*it;
+        pMsg->Write(&pRow->bOptType, 1);
+        pMsg->Write(&pRow->nSlot, 1);
+        pMsg->Write(&pRow->nOptID, 4);
+        pMsg->Write(&pRow->nOptLvl, 1);
+        pMsg->Write(&pRow->nOptValue, 4);
+        pMsg->Write(&pRow->nParam1, 4);
+        pMsg->Write(&pRow->nParam2, 4);
+    }
+}
+
+bool AQ_CharDataSelector::QueryItemDetail()
+{
+    if (!g_pShardDB)
+        BSAssertFail();
+    CDBTable* pTable = ShardDB_GetTable(g_pShardDB, SHARD_TABLE_BINDING_OPTION);
+    CDBRecordList listRows;
+    m_byResult = AQ_DB_LoadByItemDBID(m_qwItemSerial, &listRows);
+    if (m_byResult != AQ_RESULT_OK)
+        return false;
+    CMassiveMsg* pMsg = m_pResponse;
+    WORD wCount = (WORD)listRows.size();
+    BYTE byOK = 1;
+    pMsg->Write(&byOK, 1);
+    pMsg->Write(&m_byQueryTarget, 1);
+    pMsg->Write(&wCount, 2);
+    AQ_CharDataSelector_WriteItemDetailRows(m_pResponse, &listRows);
+    DB_FreeRecordList(&listRows, pTable);
+    return true;
+}
+
+BYTE AQ_CharDataSelector::LoadByItemDBID(CDBRecordList* pList)
+{
+    if (!m_qwItemSerial)
+        return 2;
+    CDBTable* pTable = GetTable(SHARD_TABLE_RENT_ITEM_INFO);
+    char szClause[0xC00];
+    memset(szClause, 0, sizeof(szClause));
+    // The serial is formatted as its low DWORD.
+    if (StringCchPrintfA(szClause, 0xC00, "where nItemDBID = %d", (int)m_qwItemSerial) != S_OK)
+    {
+        BSAssertFail();
+        return 2;
+    }
+    if (!pTable->SelectWhere(szClause, 4, pList, 1))
+    {
+        DB_FreeRecordList(pList, pTable);
+        return 7;
+    }
+    return 1;
+}
+
+bool AQ_CharDataSelector::QueryItemExtra()
+{
+    // BUG(SM-317): the selected _RentItemInfo records are never returned to their table.
+    CDBRecordList listRows;
+    m_byResult = LoadByItemDBID(&listRows);
+    if (m_byResult != AQ_RESULT_OK)
+        return false;
+    CMassiveMsg* pMsg = m_pResponse;
+    BYTE byOK = 1;
+    pMsg->Write(&byOK, 1);
+    pMsg->Write(&m_byQueryTarget, 1);
+    if (listRows.size())
+    {
+        CInstanceRentItemInfo* pRow = (CInstanceRentItemInfo*)listRows.front();
+        pMsg = m_pResponse;
+        pMsg->Write(&pRow->nRentType, 4);
+        pMsg->Write(&pRow->nCanDelete, 2);
+        pMsg->Write(&pRow->nCanRecharge, 2);
+        pMsg->Write(&pRow->PeriodBeginTime, 16);
+        pMsg->Write(&pRow->PeriodEndTime, 16);
+        pMsg->Write(&pRow->MeterRateTime, 16);
+    }
+    else
+    {
+        DWORD dwNone = 0;
+        m_pResponse->Write(&dwNone, 4);
+    }
+    return true;
+}
+
+bool AQ_CharDataSelector::QueryCollectionBook()
+{
+    CDBTable* pTable = GetTable(SHARD_TABLE_COLLECTION_BOOK);
+    if (!pTable)
+        return false;
+    int nCharID = AQ_DB_GetCharIDByName(m_strName);
+    if (!nCharID)
+    {
+        m_byResult = AQ_RESULT_NO_CHAR;
+        return false;
+    }
+    char szClause[0xC00];
+    char szTheme[0xC00];
+    if (StringCchPrintfA(szClause, 0xC00, "WHERE CharID = %d", nCharID) != S_OK)
+        BSAssertFail();
+    if (StringCchPrintfA(szTheme, 0xC00, " AND ThemeID = %u", m_dw98) != S_OK)
+        BSAssertFail();
+    if (m_dw98 && StringCchCatA(szClause, 0xC00, szTheme) != S_OK)
+        BSAssertFail();
+
+    CDBRecordList listRows;
+    if (!pTable->SelectWhere(szClause, 4, &listRows, 1))
+    {
+        m_byResult = AQ_RESULT_NO_ROW;
+        DB_FreeRecordList(&listRows, pTable);
+        return false;
+    }
+    CMassiveMsg* pMsg = m_pResponse;
+    DWORD dwCount = (DWORD)listRows.size();
+    BYTE byOK = 1;
+    pMsg->Write(&byOK, 1);
+    pMsg->Write(&m_byQueryTarget, 1);
+    pMsg->Write(&dwCount, 4);
+    for (CDBRecordList::iterator it = listRows.begin(); it != listRows.end(); ++it)
+    {
+        CInstanceCollectionBook* pRow = (CInstanceCollectionBook*)*it;
+        std::string strDate;
+        pMsg = m_pResponse;
+        pMsg->Write(&pRow->ThemeID, 4);
+        pMsg->Write(&pRow->SlotIndex, 4);
+        GM_FormatTimestamp(&strDate, &pRow->RegDate);
+        WriteText(m_pResponse, strDate.c_str());
+    }
+    DB_FreeRecordList(&listRows, pTable);
+    return true;
+}
+
+void AQ_CharDataSelector_WriteOpenMarketRows(CMassiveMsg* pMsg, CDBRecordList* pList)
+{
+    for (CDBRecordList::iterator it = pList->begin(); it != pList->end(); ++it)
+    {
+        CInstanceOpenMarket* pRow = (CInstanceOpenMarket*)*it;
+        pMsg->Write(&pRow->JID, 4);
+        pMsg->Write(&pRow->PersnalID, 4);
+        WORD wLen = (WORD)pRow->CharName16.size();
+        pMsg->Write(&wLen, 2);
+        if (wLen)
+            pMsg->Write(pRow->CharName16.c_str(), wLen);
+        pMsg->Write(&pRow->Status, 1);
+        pMsg->Write(&pRow->RefItemID, 4);
+        pMsg->Write(&pRow->TidGroupID, 4);
+        pMsg->Write(&pRow->ItemClass, 1);
+        pMsg->Write(&pRow->ItemID, 8);
+        pMsg->Write(&pRow->SellCnt, 4);
+        pMsg->Write(&pRow->RegDate, 16);
+        pMsg->Write(&pRow->EndDate, 16);
+        pMsg->Write(&pRow->Price, 8);
+        pMsg->Write(&pRow->Deposit, 8);
+        pMsg->Write(&pRow->UseCash, 4);
+        pMsg->Write(&pRow->Serial64, 8);
+    }
+}
+
+bool AQ_CharDataSelector::QueryOpenMarketByChar()
+{
+    if (!g_pShardDB)
+        BSAssertFail();
+    CDBTable* pTable = ShardDB_GetTable(g_pShardDB, SHARD_TABLE_OPEN_MARKET);
+    CDBRecordList listRows;
+    m_byResult = AQ_DB_LoadOpenMarket(&listRows, m_strName);
+    if (m_byResult != AQ_RESULT_OK)
+        return false;
+    CMassiveMsg* pMsg = m_pResponse;
+    DWORD dwCount = (DWORD)listRows.size();
+    BYTE byOK = 1;
+    pMsg->Write(&byOK, 1);
+    pMsg->Write(&m_byQueryTarget, 1);
+    pMsg->Write(&dwCount, 4);
+    AQ_CharDataSelector_WriteOpenMarketRows(m_pResponse, &listRows);
+    DB_FreeRecordList(&listRows, pTable);
+    return true;
+}
+
+bool AQ_CharDataSelector::QueryOpenMarketByDate()
+{
+    if (!g_pShardDB)
+        BSAssertFail();
+    CDBTable* pTable = ShardDB_GetTable(g_pShardDB, SHARD_TABLE_OPEN_MARKET);
+    CDBRecordList listRows;
+    char szQuery[0xC00];
+    memset(szQuery, 0, sizeof(szQuery));
+    HRESULT hr;
+    if (m_byA0)
+    {
+        hr = StringCchPrintfA(szQuery, 0xC00,
+                "SELECT OM.* FROM [dbo].[_OpenMarket] OM WITH(NOLOCK) JOIN [dbo].[_RefObjCommon] "
+                "COM WITH(NOLOCK) \t\t\t\t\t\t\tON OM.RefItemID=COM.ID WHERE OM.Status=%d AND "
+                "OM.TidGroupID=%d AND OM.ItemClass=%d AND (OM.RegDate >= '%s' AND OM.RegDate < "
+                "'%s')",
+                m_byA1, m_dw9C, m_byA0, m_strC0.c_str(), m_strDC.c_str());
+    }
+    else
+    {
+        hr = StringCchPrintfA(szQuery, 0xC00,
+                "SELECT OM.* FROM [dbo].[_OpenMarket] OM WITH(NOLOCK) JOIN [dbo].[_RefObjCommon] "
+                "COM WITH(NOLOCK) \t\t\t   ON OM.RefItemID=COM.ID WHERE OM.Status=%d AND "
+                "OM.TidGroupID=%d AND (OM.RegDate >= '%s' AND OM.RegDate < '%s')",
+                m_byA1, m_dw9C, m_strC0.c_str(), m_strDC.c_str());
+    }
+    if (hr != S_OK)
+    {
+        BSAssertFail();
+        return false;
+    }
+    std::string strQuery;
+    strQuery.assign(szQuery, strlen(szQuery));
+    if (!pTable->SelectCustom(strQuery, 4, &listRows, 0))
+    {
+        DB_FreeRecordList(&listRows, pTable);
+        return false;
+    }
+    CMassiveMsg* pMsg = m_pResponse;
+    DWORD dwCount = (DWORD)listRows.size();
+    BYTE byOK = 1;
+    pMsg->Write(&byOK, 1);
+    pMsg->Write(&m_byQueryTarget, 1);
+    pMsg->Write(&dwCount, 4);
+    AQ_CharDataSelector_WriteOpenMarketRows(m_pResponse, &listRows);
+    DB_FreeRecordList(&listRows, pTable);
+    return true;
+}

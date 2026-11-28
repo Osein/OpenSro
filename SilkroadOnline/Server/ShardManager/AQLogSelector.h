@@ -20,12 +20,6 @@ enum
     AQ_LOG_ITEM_SERIAL      = 4,
 };
 
-enum
-{
-    AQ_RESULT_NO_CHAR       = 6,
-    AQ_RESULT_UNKNOWN_LOG   = 10,
-};
-
 // AQ_LogSelector (0xE4 bytes).
 class AQ_LogSelector : public CAQJobT<AQ_LogSelector>
 {

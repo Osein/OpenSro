@@ -27,9 +27,11 @@ enum
     AQ_RESULT_FAILED            = 2,    // default; no shard DB
     AQ_RESULT_NOT_FOUND         = 4,
     AQ_RESULT_INJECTION         = 5,
+    AQ_RESULT_NO_CHAR           = 6,    // no character of the name
     AQ_RESULT_NO_ROW            = 7,
     AQ_RESULT_NO_SESSION        = 8,
     AQ_RESULT_NO_RELAY          = 9,
+    AQ_RESULT_UNKNOWN_LOG       = 10,
     AQ_RESULT_UNKNOWN_TARGET    = 11,
     AQ_RESULT_UNKNOWN_ITEM_TARGET = 12,
 };
